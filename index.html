@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>MLS DAILY</title>
   <meta name="theme-color" content="#2ecc71" />
   <style>
@@ -63,12 +63,12 @@
 <body class="light">
   <section id="login">
     <div class="login-box card">
-      <h2 class="brand">MLS <b>DAILY</b> — Final Pro</h2>
+      <h2 class="brand">MLS <b>DAILY</b></h2>
       <p class="note">Enter your PIN and select your location.</p>
       <form id="login-form" autocomplete="off">
         <div>
           <label for="pin">PIN</label>
-          <input id="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4 digits" required />
+          <input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4 digits" required />
         </div>
         <div>
           <label for="site">Worksite</label>
@@ -107,19 +107,19 @@
     <main id="main"></main>
   </section>
 
-  
+  <div id="overlay"></div>
   <aside id="drawer">
     <div class="drawer-head">
       <strong id="drawer-title">Details</strong>
       <button id="drawer-close" class="btn danger" style="padding:6px 10px">Close</button>
     </div>
-    
+    <div id="drawer-body" style="padding:var(--space);overflow:auto"></div>
   </aside>
 
   <script>
   (function(){
     'use strict';
-    const KEY='mls_state_final_pro_last'; // keep same key so existing installs continue to work
+    const KEY='mls_daily_state_v1';
     const LOCS=['MLS - Colombo 4','Finnish Preschool - Park Road','Forest School - Piliyandala','SenSoMo - One Galle Face','Forest School - Cape Weligama'];
     const DOM={
       app:document.getElementById('app'), login:document.getElementById('login'),
@@ -128,7 +128,8 @@
       badge:document.getElementById('badge'), loc:document.getElementById('loc'),
       logout:document.getElementById('logout'), sync:document.getElementById('sync'), loadCloud:document.getElementById('loadCloud'),
       overlay:document.getElementById('overlay'), drawer:document.getElementById('drawer'), dtitle:document.getElementById('drawer-title'), dbody:document.getElementById('drawer-body'), dclose:document.getElementById('drawer-close'),
-      theme:document.getElementById('theme')};
+      theme:document.getElementById('theme')
+    };
     const TABS={
       Admin:['Today','Attendance','Leaves','Holidays','Inbox','Staff','Rewards','Shift Planner','Notice Board','Settings','Export','Payroll'],
       Staff:['My Dashboard','My Leaves','My Requests','My Profile','Notice Board','Company Holidays']
@@ -216,7 +217,6 @@
       if(!site){DOM.err.textContent='Select your worksite.'; DOM.site.focus(); return;}
       if(pin==='0000'){ user={id:'admin',name:'Admin',role:'Admin'}; }
       else{
-        // normalize comparison to avoid type issues across devices
         const m = S.staff.find(s=> String(s.pin).trim()===pin && s.active);
         if(m) user={id:m.id,name:m.name,role:'Staff'};
       }
@@ -282,25 +282,15 @@
       }catch(e){alert('Load failed: '+e.message);}
     };
     DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
-    DOM.importOrg.onclick=()=>{
-      const code = prompt('Paste Org Code here to load data on this device:');
-      if(!code) return;
-      try{
-        const json = decodeURIComponent(escape(atob(code.trim())));
-        const obj = JSON.parse(json);
-        if(!obj || typeof obj!=='object') throw new Error('Invalid code');
-        S = obj; save(); alert('Organization data loaded. You can log in now.');
-      }catch(e){ alert('Invalid code: '+e.message); }
-    };
 
     // Clocking helpers (staff)
     function clockIn(){ const idu=user.id, d=today(); if(S.live[idu]?.date===d) return alert('Already clocked in');
-      S.live[idu]={date:d,clockIn:now(),breaks:[],status:'in',location:worksite}; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
-    function startBreak(){ const L=S.live[user.id]; if(!L || L.status==='break') return alert(!L?'Clock in first':'Already on a break'); L.breaks.push({start:now(),end:null}); L.status='break'; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
-    function endBreak(){ const L=S.live[user.id]; if(!L || L.status!=='break') return alert(!L?'Clock in first':'Not on a break'); const last=L.breaks[L.breaks.length-1]; if(last && !last.end) last.end=now(); L.status='in'; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
+      S.live[idu]={date:d,clockIn:now(),breaks:[],status:'in',location:worksite}; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
+    function startBreak(){ const L=S.live[user.id]; if(!L || L.status==='break') return alert(!L?'Clock in first':'Already on a break'); L.breaks.push({start:now(),end:null}); L.status='break'; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
+    function endBreak(){ const L=S.live[user.id]; if(!L || L.status!=='break') return alert(!L?'Clock in first':'Not on a break'); const last=L.breaks[L.breaks.length-1]; if(last && !last.end) last.end=now(); L.status='in'; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
     function clockOut(){ const L=S.live[user.id]; if(!L) return alert('Clock in first'); if(L.status==='break') return alert('End break before clocking out');
       S.sessions.push({id:id(),staffId:user.id,date:L.date,clockIn:L.clockIn,clockOut:now(),breaks:L.breaks||[],location:L.location||worksite});
-      delete S.live[user.id]; autoRewardOnFinalize(user.id, today()); save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); alert('Clocked out.'); }
+      delete S.live[user.id]; autoRewardOnFinalize(user.id, today()); save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); alert('Clocked out.'); }
 
     // Views
     const V={
@@ -406,7 +396,7 @@
       },
       render_Staff(el){
         el.innerHTML=`<div class="grid g2">
-          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="\d{4}" maxlength="4" required></div><button class="btn">Add</button></form></div>
+          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="[0-9]{4}" maxlength="4" required></div><button class="btn">Add</button></form></div>
           <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
         </div>`;
         el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault(); const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String(el.querySelector('#spin').value.trim()),active:true}; if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all'); if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists'); S.staff.push(ns); save(); V.render_Staff(el);};
@@ -475,29 +465,9 @@
           <div><label>Holiday Points</label><input id="rp1" type="number" value="${s.rewardPoints.holiday}"></div>
           <div><label>Overtime /h</label><input id="rp2" type="number" value="${s.rewardPoints.overtimePerHour}"></div>
           <div><label>Event Default</label><input id="rp3" type="number" value="${s.rewardPoints.eventDefault}"></div>
-          <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <button type="button" id="genOrgCode" class="btn secondary" title="Generates a code you can paste on another device to load the same data">Generate Org Code</button>
-            <button type="button" id="importOrgCode" class="btn secondary" title="Paste a code to load data">Import Org Code</button>
-          </div>
           <button class="btn" style="grid-column:1/-1">Save</button>
         </form></div>`;
         el.querySelector('#set').onsubmit=(e)=>{e.preventDefault(); s.org=el.querySelector('#og').value; s.breakMins=el.querySelector('#br').valueAsNumber; s.targetMins=el.querySelector('#tg').valueAsNumber; s.halfDayMins=el.querySelector('#hd').valueAsNumber; s.workdayStart=el.querySelector('#ws').value; s.workdayEnd=el.querySelector('#we').value; s.payPeriodStart=el.querySelector('#ps').value; s.payPeriodEnd=el.querySelector('#pe').value; s.webhook=el.querySelector('#wh').value; s.rewardPoints.holiday=el.querySelector('#rp1').valueAsNumber; s.rewardPoints.overtimePerHour=el.querySelector('#rp2').valueAsNumber; s.rewardPoints.eventDefault=el.querySelector('#rp3').valueAsNumber; save(); alert('Saved');};
-        el.querySelector('#genOrgCode').onclick=()=>{
-          try{
-            const code = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
-            openDrawer('Organization Code', '<div class="card"><h3>Share this code securely</h3><p class="note">Paste this code on another device (Login screen → Load Org Code) to use the same data.</p><textarea style="width:100%;height:160px">'+code+'</textarea></div>');
-          }catch(e){alert('Failed to generate code: '+e.message);}
-        };
-        el.querySelector('#importOrgCode').onclick=()=>{
-          const code = prompt('Paste Org Code:');
-          if(!code) return;
-          try{
-            const json = decodeURIComponent(escape(atob(code.trim())));
-            const obj = JSON.parse(json);
-            if(!obj || typeof obj!=='object') throw new Error('Invalid code');
-            S = obj; save(); alert('Organization data loaded.'); show('Settings');
-          }catch(e){ alert('Invalid code: '+e.message); }
-        };
       },
       render_Export(el){
         el.innerHTML=`<div class="card"><h3>Export</h3><div class="grid g4" style="margin-top:10px">
