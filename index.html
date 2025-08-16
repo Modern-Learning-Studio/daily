@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  <title>MLS Attendance — FINAL PRO (Last)</title>
+  <title>MLS Attendance — FINAL PRO (Last, Fixed)</title>
   <meta name="theme-color" content="#2ecc71" />
   <style>
     :root{
@@ -20,12 +20,12 @@
     .hidden{display:none!important}
     header.sticky{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--border);box-shadow:0 4px 16px var(--elev);padding:10px var(--space);display:flex;align-items:center;justify-content:space-between;gap:8px}
     .brand{font-weight:800;letter-spacing:.2px}.brand b{color:var(--green)}
-    .actions{display:flex;align-items:center;gap:10px}
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.85rem;color:#fff}
     .admin{background:var(--blue)} .staff{background:var(--green)} .logout{background:var(--red);cursor:pointer}
     .loc-pill{font-size:.85rem;color:var(--muted)}
     nav.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px var(--space);border-bottom:1px solid var(--border)}
-    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:#fff;font-weight:700;cursor:pointer;transition:transform .05s ease}
+    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:#fff;font-weight:700;cursor:pointer;transition:transform .05s ease;white-space:nowrap}
     .btn:active{transform:translateY(1px)}
     .btn.secondary{background:var(--muted);color:#fff}
     .btn.danger{background:var(--red)}
@@ -38,6 +38,7 @@
     .grid{display:grid;gap:var(--space)} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
     @media (max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
     input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+    input[type="password"]{letter-spacing:0.2em}
     label{font-weight:700;font-size:.9rem;margin-bottom:6px;display:block}
     .note{color:var(--muted);font-size:.9rem}
     .table{max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:12px}
@@ -64,10 +65,10 @@
     <div class="login-box card">
       <h2 class="brand">MLS <b>Attendance</b> — Final Pro</h2>
       <p class="note">Enter your PIN and select your location.</p>
-      <form id="login-form">
+      <form id="login-form" autocomplete="off">
         <div>
           <label for="pin">PIN</label>
-          <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="4 digits" />
+          <input id="pin" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4 digits" required />
         </div>
         <div>
           <label for="site">Worksite</label>
@@ -81,6 +82,9 @@
           </select>
         </div>
         <button class="btn" style="width:100%;margin-top:8px">Login</button>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button id="importOrg" type="button" class="btn secondary" title="Paste code from Settings to load the same data on this device">Load Org Code</button>
+        </div>
       </form>
       <p class="note" style="margin-top:8px">If allowed, geolocation is stored with your login.</p>
       <p id="login-error" style="color:var(--red);min-height:1.25rem;margin:6px 0 0 0"></p>
@@ -93,7 +97,8 @@
       <div class="actions">
         <span id="badge" class="badge staff"></span>
         <span id="loc" class="loc-pill"></span>
-        <button id="sync" class="btn secondary">Sync</button>
+        <button id="sync" class="btn secondary">Sync → Webhook</button>
+        <button id="loadCloud" class="btn secondary" title="Fetch state from webhook (GET)">Load from Webhook</button>
         <label style="display:flex;align-items:center;gap:6px">
           <input id="theme" type="checkbox" onchange="document.body.className=this.checked?'dark':'light'">
           <span class="note">Dark</span>
@@ -117,16 +122,17 @@
   <script>
   (function(){
     'use strict';
-    const KEY='mls_state_final_pro_last';
+    const KEY='mls_state_final_pro_last'; // keep same key so existing installs continue to work
     const LOCS=['MLS - Colombo 4','Finnish Preschool - Park Road','Forest School - Piliyandala','SenSoMo - One Galle Face','Forest School - Cape Weligama'];
     const DOM={
       app:document.getElementById('app'), login:document.getElementById('login'),
       frm:document.getElementById('login-form'), pin:document.getElementById('pin'), site:document.getElementById('site'), err:document.getElementById('login-error'),
       tabs:document.getElementById('tabs'), main:document.getElementById('main'),
       badge:document.getElementById('badge'), loc:document.getElementById('loc'),
-      logout:document.getElementById('logout'), sync:document.getElementById('sync'),
+      logout:document.getElementById('logout'), sync:document.getElementById('sync'), loadCloud:document.getElementById('loadCloud'),
       overlay:document.getElementById('overlay'), drawer:document.getElementById('drawer'), dtitle:document.getElementById('drawer-title'), dbody:document.getElementById('drawer-body'), dclose:document.getElementById('drawer-close'),
-      theme:document.getElementById('theme')
+      theme:document.getElementById('theme'),
+      importOrg:document.getElementById('importOrg')
     };
     const TABS={
       Admin:['Today','Attendance','Leaves','Holidays','Inbox','Staff','Rewards','Shift Planner','Notice Board','Settings','Export','Payroll'],
@@ -209,13 +215,14 @@
     // LOGIN
     DOM.frm.addEventListener('submit', ev=>{
       ev.preventDefault(); DOM.err.textContent='';
-      const pin = (DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
+      const pin = String(DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
       const site = DOM.site.value;
-      if(!pin){DOM.err.textContent='Enter your PIN.'; return;}
-      if(!site){DOM.err.textContent='Select your worksite.'; return;}
+      if(!pin){DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return;}
+      if(!site){DOM.err.textContent='Select your worksite.'; DOM.site.focus(); return;}
       if(pin==='0000'){ user={id:'admin',name:'Admin',role:'Admin'}; }
       else{
-        const m = S.staff.find(s=>s.pin===pin && s.active);
+        // normalize comparison to avoid type issues across devices
+        const m = S.staff.find(s=> String(s.pin).trim()===pin && s.active);
         if(m) user={id:m.id,name:m.name,role:'Staff'};
       }
       if(!user){DOM.err.textContent='Invalid PIN or inactive account.'; return;}
@@ -224,7 +231,13 @@
         S.logins.unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
         save();
       };
-      if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{record(p.coords);},_=>record(),{enableHighAccuracy:true,timeout:8000,maximumAge:0});} else record();
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          p=>{record(p.coords);},
+          _=>{record();},
+          {enableHighAccuracy:true,timeout:8000,maximumAge:0}
+        );
+      } else record();
       DOM.login.style.display='none'; DOM.app.style.display='block';
       renderHeader(); renderTabs(); show(TABS[user.role][0]);
       DOM.pin.value='';
@@ -263,7 +276,27 @@
       try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)}); if(!r.ok) throw new Error(r.status+' '+r.statusText); alert('Sync successful');}
       catch(e){alert('Sync failed: '+e.message);}
     };
+    DOM.loadCloud.onclick=async()=>{
+      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
+      try{
+        const r=await fetch(url,{method:'GET'});
+        if(!r.ok) throw new Error(r.status+' '+r.statusText);
+        const data = await r.json();
+        if(!data || typeof data!=='object') throw new Error('Invalid data');
+        S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]);
+      }catch(e){alert('Load failed: '+e.message);}
+    };
     DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
+    DOM.importOrg.onclick=()=>{
+      const code = prompt('Paste Org Code here to load data on this device:');
+      if(!code) return;
+      try{
+        const json = decodeURIComponent(escape(atob(code.trim())));
+        const obj = JSON.parse(json);
+        if(!obj || typeof obj!=='object') throw new Error('Invalid code');
+        S = obj; save(); alert('Organization data loaded. You can log in now.');
+      }catch(e){ alert('Invalid code: '+e.message); }
+    };
 
     // Clocking helpers (staff)
     function clockIn(){ const idu=user.id, d=today(); if(S.live[idu]?.date===d) return alert('Already clocked in');
@@ -286,8 +319,8 @@
         el.innerHTML=`
           <div class="card">
             <h3>Who's In Today</h3>
-            <div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
-              <div style="flex:1">
+            <div style="display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap">
+              <div style="flex:1;min-width:220px">
                 <label>Filter by Centre</label>
                 <select id="tCentre">${options.map(o=>`<option>${o}</option>`).join('')}</select>
               </div>
@@ -346,12 +379,12 @@
           <div class="grid g2">
             <div class="card">
               <h3>Submit Leave for Staff</h3>
-              <form id="lf">
-                <div><label>Staff</label><select id="leaveStaff">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
-                <div><label>Date</label><input type="date" id="leaveDate" value="${today()}"></div>
-                <div><label>Type</label><select id="leaveType"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div>
-                <div id="minsWrap" class="hidden"><label>Minutes (Short)</label><input type="number" id="leaveMins" placeholder="60"></div>
-                <div><label>Reason</label><textarea id="leaveReason" rows="2"></textarea></div>
+              <form id="admin-leave-form">
+                <div><label for="leave-staff">Staff</label><select id="leave-staff">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+                <div><label for="leave-date">Date</label><input type="date" id="leave-date" value="${today()}"></div>
+                <div><label for="leave-type">Type</label><select id="leave-type"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="minsWrap" class="hidden"><label for="leave-mins">Minutes (Short)</label><input type="number" id="leave-mins" placeholder="60"></div>
+                <div><label for="leave-reason">Reason</label><textarea id="leave-reason" rows="2"></textarea></div>
                 <button class="btn">Submit</button>
               </form>
             </div>
@@ -361,8 +394,8 @@
               <tbody>${all.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${staffName(l.staffId)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td><td><button class="btn secondary la" data-id="${l.id}" data-s="Approved">Approve</button> <button class="btn secondary la" data-id="${l.id}" data-s="Pending">Pend</button> <button class="btn danger la" data-id="${l.id}" data-s="Rejected">Reject</button></td></tr>`).join('') || `<tr><td colspan="6">No leaves.</td></tr>`}</tbody></table></div>
             </div>
           </div>`;
-        const type=el.querySelector('#leaveType'), wrap=el.querySelector('#minsWrap'); type.onchange=()=>{wrap.classList.toggle('hidden', type.value!=='Short');};
-        el.querySelector('#lf').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:el.querySelector('#leaveStaff').value,type:type.value,date:el.querySelector('#leaveDate').value,minutes:el.querySelector('#leaveMins').valueAsNumber||0,reason:el.querySelector('#leaveReason').value,status:'Approved',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_Leaves(el); alert('Leave submitted.');};
+        const type=el.querySelector('#leave-type'), wrap=el.querySelector('#minsWrap'); type.onchange=()=>{wrap.classList.toggle('hidden', type.value!=='Short');};
+        el.querySelector('#admin-leave-form').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:el.querySelector('#leave-staff').value,type:type.value,date:el.querySelector('#leave-date').value,minutes:el.querySelector('#leave-mins').valueAsNumber||0,reason:el.querySelector('#leave-reason').value,status:'Approved',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_Leaves(el); alert('Leave submitted.');};
         el.querySelectorAll('.la').forEach(b=>b.onclick=()=>{const it=S.leaves.find(x=>x.id===b.dataset.id); if(it){it.status=b.dataset.s; save(); V.render_Leaves(el);}});
       },
       render_Holidays(el){
@@ -378,10 +411,10 @@
       },
       render_Staff(el){
         el.innerHTML=`<div class="grid g2">
-          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="\\d{4}" required></div><button class="btn">Add</button></form></div>
+          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="\d{4}" maxlength="4" required></div><button class="btn">Add</button></form></div>
           <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
         </div>`;
-        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault(); const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:el.querySelector('#spin').value.trim(),active:true}; if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all'); if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists'); S.staff.push(ns); save(); V.render_Staff(el);};
+        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault(); const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String(el.querySelector('#spin').value.trim()),active:true}; if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all'); if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists'); S.staff.push(ns); save(); V.render_Staff(el);};
         el.querySelectorAll('.sa').forEach(b=>b.onclick=()=>{const s=S.staff.find(x=>x.id===b.dataset.id); if(!s) return; if(b.dataset.a==='remove'){if(!confirm('Remove staff?')) return; S.staff=S.staff.filter(x=>x.id!==s.id);} else s.active = !s.active; save(); V.render_Staff(el);});
         el.querySelectorAll('.pview').forEach(b=>b.onclick=()=>openProfile(b.dataset.id));
       },
@@ -447,9 +480,29 @@
           <div><label>Holiday Points</label><input id="rp1" type="number" value="${s.rewardPoints.holiday}"></div>
           <div><label>Overtime /h</label><input id="rp2" type="number" value="${s.rewardPoints.overtimePerHour}"></div>
           <div><label>Event Default</label><input id="rp3" type="number" value="${s.rewardPoints.eventDefault}"></div>
+          <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button type="button" id="genOrgCode" class="btn secondary" title="Generates a code you can paste on another device to load the same data">Generate Org Code</button>
+            <button type="button" id="importOrgCode" class="btn secondary" title="Paste a code to load data">Import Org Code</button>
+          </div>
           <button class="btn" style="grid-column:1/-1">Save</button>
         </form></div>`;
         el.querySelector('#set').onsubmit=(e)=>{e.preventDefault(); s.org=el.querySelector('#og').value; s.breakMins=el.querySelector('#br').valueAsNumber; s.targetMins=el.querySelector('#tg').valueAsNumber; s.halfDayMins=el.querySelector('#hd').valueAsNumber; s.workdayStart=el.querySelector('#ws').value; s.workdayEnd=el.querySelector('#we').value; s.payPeriodStart=el.querySelector('#ps').value; s.payPeriodEnd=el.querySelector('#pe').value; s.webhook=el.querySelector('#wh').value; s.rewardPoints.holiday=el.querySelector('#rp1').valueAsNumber; s.rewardPoints.overtimePerHour=el.querySelector('#rp2').valueAsNumber; s.rewardPoints.eventDefault=el.querySelector('#rp3').valueAsNumber; save(); alert('Saved');};
+        el.querySelector('#genOrgCode').onclick=()=>{
+          try{
+            const code = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+            openDrawer('Organization Code', '<div class="card"><h3>Share this code securely</h3><p class="note">Paste this code on another device (Login screen → Load Org Code) to use the same data.</p><textarea style="width:100%;height:160px">'+code+'</textarea></div>');
+          }catch(e){alert('Failed to generate code: '+e.message);}
+        };
+        el.querySelector('#importOrgCode').onclick=()=>{
+          const code = prompt('Paste Org Code:');
+          if(!code) return;
+          try{
+            const json = decodeURIComponent(escape(atob(code.trim())));
+            const obj = JSON.parse(json);
+            if(!obj || typeof obj!=='object') throw new Error('Invalid code');
+            S = obj; save(); alert('Organization data loaded.'); show('Settings');
+          }catch(e){ alert('Invalid code: '+e.message); }
+        };
       },
       render_Export(el){
         el.innerHTML=`<div class="card"><h3>Export</h3><div class="grid g4" style="margin-top:10px">
