@@ -145,7 +145,21 @@
     const fmt=d=>new Date(d).toLocaleDateString('en-CA'); const fmtDT=d=>new Date(d).toLocaleString();
 
     // State
-    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}catch{seed();}}
+    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}
+// Auto-bootstrap from webhook on fresh devices
+(async function initialCloudBootstrap(){
+  try{
+    if((S.staff||[]).length<=3 && S.settings && S.settings.webhook){
+      const r = await fetch(S.settings.webhook,{method:'GET'});
+      if(r.ok){
+        const data = await r.json();
+        if(data && typeof data==='object' && Array.isArray(data.staff) && data.staff.length>(S.staff||[]).length){
+          S = data; save();
+        }
+      }
+    }
+  }catch(e){/* ignore */}
+})();catch{seed();}}
     function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){alert('Storage error: '+e.message);}}
     function seed(){
       S={ settings:{org:'MLS Innovations',breakMins:30,targetMins:480,halfDayMins:240,workdayStart:'09:00',workdayEnd:'17:30',payPeriodStart:'2025-08-01',payPeriodEnd:'2025-08-31',webhook:'',rewardPoints:{holiday:5,overtimePerHour:1,eventDefault:10}},
@@ -209,21 +223,57 @@
     const closeDrawer=()=>{DOM.overlay.classList.remove('show'); DOM.drawer.classList.remove('show');};
 
     // LOGIN
-    DOM.frm.addEventListener('submit', ev=>{
-      ev.preventDefault(); DOM.err.textContent='';
-      const pin = String(DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
-      const site = DOM.site.value;
-      if(!pin){DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return;}
-      if(!site){DOM.err.textContent='Select your worksite.'; DOM.site.focus(); return;}
-      if(pin==='0000'){ user={id:'admin',name:'Admin',role:'Admin'}; }
-      else{
-        const m = S.staff.find(s=> String(s.pin).trim()===pin && s.active);
-        if(m) user={id:m.id,name:m.name,role:'Staff'};
+    DOM.frm.addEventListener('submit', async ev=>{
+  ev.preventDefault(); DOM.err.textContent='';
+  const pin = String(DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
+  const site = DOM.site.value;
+  if(!pin){DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return;}
+  if(!site){DOM.err.textContent='Select your worksite.'; DOM.site.focus(); return;}
+
+  function tryMatch(){
+    if(pin==='0000'){ return {id:'admin',name:'Admin',role:'Admin'}; }
+    const m = S.staff.find(s=> String(s.pin).trim()===pin && s.active);
+    return m ? {id:m.id,name:m.name,role:'Staff'} : null;
+  }
+  let candidate = tryMatch();
+
+  // Fallback: pull latest org from webhook and retry once
+  if(!candidate && S.settings && S.settings.webhook){
+    try{
+      const r = await fetch(S.settings.webhook, {method:'GET'});
+      if(r.ok){
+        const data = await r.json();
+        if(data && typeof data==='object'){
+          S = data; save();
+          candidate = tryMatch();
+        }
       }
-      if(!user){DOM.err.textContent='Invalid PIN or inactive account.'; return;}
-      worksite=site;
-      const record=(coords)=>{
-        S.logins.unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
+    }catch(e){ /* ignore network errors */ }
+  }
+
+  if(!candidate){
+    DOM.err.textContent='Invalid PIN or inactive account. Ask Admin to Sync to cloud, then try again.';
+    return;
+  }
+
+  user = candidate;
+  worksite = site;
+
+  const record=(coords)=>{
+    S.logins.unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
+    save();
+  };
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      p=>{record(p.coords);},
+      _=>{record();},
+      {enableHighAccuracy:true,timeout:8000,maximumAge:0}
+    );
+  } else record();
+  DOM.login.style.display='none'; DOM.app.style.display='block';
+  renderHeader(); renderTabs(); show(TABS[user.role][0]);
+  DOM.pin.value='';
+});
         save();
       };
       if(navigator.geolocation){
@@ -399,7 +449,15 @@
           <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="[0-9]{4}" maxlength="4" required></div><button class="btn">Add</button></form></div>
           <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
         </div>`;
-        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault(); const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String(el.querySelector('#spin').value.trim()),active:true}; if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all'); if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists'); S.staff.push(ns); save(); V.render_Staff(el);};
+        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault();
+  const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String(el.querySelector('#spin').value.trim()),active:true};
+  if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all');
+  if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists');
+  S.staff.push(ns); save(); V.render_Staff(el);
+  if(S.settings && S.settings.webhook){
+    setTimeout(()=>{ if(confirm('Staff added. Sync to cloud so they can log in from other devices?')) DOM.sync.click(); }, 0);
+  }
+};
         el.querySelectorAll('.sa').forEach(b=>b.onclick=()=>{const s=S.staff.find(x=>x.id===b.dataset.id); if(!s) return; if(b.dataset.a==='remove'){if(!confirm('Remove staff?')) return; S.staff=S.staff.filter(x=>x.id!==s.id);} else s.active = !s.active; save(); V.render_Staff(el);});
         el.querySelectorAll('.pview').forEach(b=>b.onclick=()=>openProfile(b.dataset.id));
       },
