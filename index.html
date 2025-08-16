@@ -6,29 +6,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 :root{
-  --bg:#0f1115;--card:#171a21;--line:#2a2f3a;--text:#e6e6ea;--muted:#a6adbb;
-  --accent:#2ecc71;--accent-d:#27ae60;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
-  --radius:12px;--shadow:0 10px 25px rgba(0,0,0,.35);
+  --bg:#ffffff;--card:#ffffff;--line:#e5e7eb;--text:#111827;--muted:#6b7280;
+  --accent:#22c55e;--accent-d:#16a34a;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --radius:12px;--shadow:0 6px 24px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box} html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
 .hidden{display:none!important}
 .container{max-width:1200px;margin:0 auto;padding:16px}
-header.sticky{position:sticky;top:0;z-index:30;background:rgba(23,26,33,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.sticky{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 header .bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
 .brand{font-weight:800;letter-spacing:.3px}
 .brand .accent{color:var(--accent)}
-.badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:600;background:#10131a}
-.badge.admin{border-color:rgba(59,130,246,.35);color:#93c5fd}
-.badge.staff{border-color:rgba(16,185,129,.35);color:#6ee7b7}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#10131a;color:var(--text);cursor:pointer;transition:.15s all}
+.badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:600;background:#f8fafc;color:var(--text)}
+.badge.admin{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a}
+.badge.staff{border-color:#bbf7d0;background:#ecfdf5;color:#065f46}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#ffffff;color:var(--text);cursor:pointer;transition:.15s all}
 .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
-.btn.primary{background:var(--accent);border-color:transparent;color:#08140d}
-.btn.danger{background:var(--red);border-color:transparent}
+.btn.primary{background:var(--accent);border-color:transparent;color:#052e16}
+.btn.danger{background:var(--red);border-color:transparent;color:white}
 .btn.small{padding:6px 10px;border-radius:8px;font-size:12px}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
-.tabs .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#111520;color:var(--muted);cursor:pointer}
-.tabs .tab.active{background:var(--accent);color:#0b1510;border-color:transparent}
+.tabs .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#f9fafb;color:#374151;cursor:pointer}
+.tabs .tab.active{background:var(--accent);color:#052e16;border-color:transparent}
 .grid{display:grid;gap:16px}
 .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -36,32 +36,34 @@ header .bar{display:flex;gap:12px;align-items:center;justify-content:space-betwe
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 .card .head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
 .card .body{padding:14px 16px}
-.input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#10131a;color:var(--text)}
+.input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#ffffff;color:var(--text)}
 label{display:block;font-weight:600;margin:8px 0 6px}
 .table-wrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-thead th{position:sticky;top:0;background:#111520;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+thead th{position:sticky;top:0;background:#f3f4f6;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.kpi .item{padding:14px;border:1px solid var(--line);border-radius:12px;background:#10131a;text-align:center}
+.kpi .item{padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;text-align:center}
 .kpi .value{font-size:22px;font-weight:800;color:var(--accent)}
 .kpi .label{color:var(--muted);font-size:12px}
-.chip{padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#10131a}
-.chip.ok{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35);color:#a7f3d0}
-.chip.warn{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.35);color:#fde68a}
-.chip.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#fecaca}
+.chip{padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#f8fafc}
+.chip.ok{background:#ecfdf5;border-color:#86efac;color:#065f46}
+.chip.warn{background:#fffbeb;border-color:#fcd34d;color:#78350f}
+.chip.err{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
 footer{padding:30px 16px;color:var(--muted);text-align:center}
 .view{display:none}
 .view.active{display:block;animation:fade .25s ease}
 @keyframes fade{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* login */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f8fafc}
 .login-card{max-width:420px;width:100%}
-.err{color:#fca5a5;min-height:18px;margin-top:6px}
+.err{color:#b91c1c;min-height:18px;margin-top:6px}
 .row{display:flex;gap:10px;align-items:center}
 .row > * {flex:1}
 .small{font-size:12px;color:var(--muted)}
-.tag{display:inline-block;margin-right:8px;color:#9ca3af}
+.tag{display:inline-block;margin-right:8px;color:#4b5563}
+/* drawer overlay */
+#overlay{background:rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
@@ -72,17 +74,13 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       <div class="small">Single-File • Offline-first</div>
     </div>
     <div class="body">
-      <form id="login-form">
-        <label>Centre (optional)</label>
-        <select id="site" class="input"></select>
-        <label>PIN</label>
-        <input id="pin" class="input" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="e.g., 1001" maxlength="8">
+      <form id="login-form" novalidate>
+        <label for="site">Centre</label>
+        <select id="site" class="input" required></select>
+        <label for="pin">PIN</label>
+        <input id="pin" class="input" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="e.g., 1001" maxlength="8" required>
         <div id="err" class="err"></div>
         <button class="btn primary" style="width:100%">Login</button>
-        <div class="row" style="margin-top:8px">
-          <button type="button" id="admin-safe" class="btn">Admin Safe Entry</button>
-          <button type="button" id="reset-app" class="btn danger">Reset App Data</button>
-        </div>
       </form>
       <div class="small" style="margin-top:10px">
         Tip: Admin <span class="tag">0000</span> • Staff <span class="tag">1001</span> <span class="tag">1002</span>
@@ -97,6 +95,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       <div class="brand">MLS <span class="accent">DAILY</span></div>
       <div id="who" class="badge">—</div>
       <div class="row" style="gap:8px;flex:0 0 auto">
+        <button id="test-webhook" class="btn small">Test Webhook</button>
         <button id="load-cloud" class="btn small">Load from Webhook</button>
         <button id="sync" class="btn small">Sync → Webhook</button>
         <button id="logout" class="btn small">Logout</button>
@@ -108,7 +107,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
 </section>
 
 <!-- Drawer -->
-<div id="overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50"></div>
+<div id="overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50"></div>
 <aside id="drawer" class="hidden" style="position:fixed;right:0;top:0;height:100%;width:420px;max-width:96%;background:var(--card);border-left:1px solid var(--line);z-index:60;box-shadow:var(--shadow)">
   <div class="head" style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 14px">
     <b id="drawer-title">Details</b>
@@ -134,31 +133,27 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     frm: document.getElementById('login-form'),
     logout: document.getElementById('logout'),
     sync: document.getElementById('sync'),
+    testWebhook: document.getElementById('test-webhook'),
     loadCloud: document.getElementById('load-cloud'),
     overlay: document.getElementById('overlay'),
     drawer: document.getElementById('drawer'),
     dtitle: document.getElementById('drawer-title'),
     dbody: document.getElementById('drawer-body'),
     dclose: document.getElementById('drawer-close'),
-    adminSafe: document.getElementById('admin-safe'),
-    resetApp: document.getElementById('reset-app'),
   };
 
-  const KEY = 'MLS_DAILY_STATE_V3';
+  const KEY = 'MLS_DAILY_STATE_V4';
 
-  const id = () => crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  const id = () => (crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2));
 
   const fmtDate = s => !s ? '' : new Date(s).toLocaleDateString('en-CA');
   const fmtDateTime = s => !s ? '' : new Date(s).toLocaleString();
   const today = () => new Date().toISOString().slice(0,10);
   const startOfMonth = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10);
   const hhmmToMin = t => !t || !t.includes(':') ? 0 : (t.split(':')[0]*60 + (+t.split(':')[1]));
-  const minToHHMM = m => {
-    m = Math.max(0, Math.round(m||0));
-    const h = Math.floor(m/60), mm = m%60; return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
-  };
+  const minToHHMM = m => { m = Math.max(0, Math.round(m||0)); const h = Math.floor(m/60), mm = m%60; return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0'); };
 
-  const centresList = [
+  const centresDefault = [
     'MLS - Colombo 4',
     'Finnish Preschool - Park Road',
     'Forest School - Piliyandala',
@@ -174,26 +169,26 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
   function seed() {
     S = {
       _seeded: true,
-      schema: 3,
+      schema: 4,
       settings: {
         org: 'MLS Innovations',
-        centres: centresList.slice(),
+        centres: centresDefault.slice(),
         breakMins: 30,
         targetMins: 480,
         halfDayMins: 240,
         webhook: '' // set in Settings
       },
       staff: [
-        { id: '1001', name: 'John Doe', role: 'Developer', pin: '1001', active: true, defaultWorksite: centresList[0], joinDate: '2023-01-10' },
-        { id: '1002', name: 'Jane Smith', role: 'Designer', pin: '1002', active: true, defaultWorksite: centresList[1], joinDate: '2023-03-15' },
+        { id: '1001', name: 'John Doe', role: 'Developer', pin: '1001', active: true, defaultWorksite: centresDefault[0], joinDate: '2023-01-10' },
+        { id: '1002', name: 'Jane Smith', role: 'Designer', pin: '1002', active: true, defaultWorksite: centresDefault[1], joinDate: '2023-03-15' },
       ],
       profiles: {
         '1001': { info:{phone:'0771234567', email:'john.d@example.com'}, docs:[], performance:{points:120}, rewards:[] },
         '1002': { info:{phone:'0719876543', email:'jane.s@example.com'}, docs:[], performance:{points:65}, rewards:[] },
       },
       sessions: [
-        { id:id(), staffId:'1001', date: today(), clockIn:'09:00', clockOut:'17:30', centre: centresList[0] },
-        { id:id(), staffId:'1002', date: today(), clockIn:'09:15', clockOut:'17:45', centre: centresList[1] },
+        { id:id(), staffId:'1001', date: today(), clockIn:'09:00', clockOut:'17:30', centre: centresDefault[0] },
+        { id:id(), staffId:'1002', date: today(), clockIn:'09:15', clockOut:'17:45', centre: centresDefault[1] },
       ],
       breaks: [],
       leaves: [
@@ -220,7 +215,15 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       if(!obj.settings || !Array.isArray(obj.staff)){ seed(); return; }
       // coerce pins to strings
       obj.staff.forEach(s => { if(s && s.pin!=null) s.pin = String(s.pin); });
-      S = obj;
+      // migrate centres
+      if(!obj.settings) obj.settings = {};
+      if(typeof obj.settings.centres === 'string'){
+        obj.settings.centres = obj.settings.centres.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      }
+      if(!Array.isArray(obj.settings.centres) || obj.settings.centres.length===0){
+        obj.settings.centres = centresDefault.slice();
+      }
+      S = obj; save();
     }catch(e){ console.error('load error', e); seed(); }
   }
 
@@ -243,7 +246,12 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       if(!r.ok) throw new Error(r.status+' '+r.statusText);
       const data = await r.json();
       if(data && typeof data==='object'){
-        S = data; save(); return S;
+        S = data;
+        // post-load safety
+        if(!Array.isArray(S.settings?.centres) || !S.settings.centres.length){ S.settings.centres = centresDefault.slice(); }
+        if(Array.isArray(S.staff)) S.staff.forEach(s => s.pin = String(s.pin||''));
+        save();
+        return S;
       }
     }catch(e){ console.warn('cloud load failed', e); }
     return null;
@@ -253,27 +261,16 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
   const V = {}; // view renderers
   function show(name){
     try{
-      // activate tab
       [...document.querySelectorAll('.tabs .tab')].forEach(b => b.classList.toggle('active', b.dataset.v===name));
       const idc = 'view-'+name.replace(/\s+/g,'');
       let el = document.getElementById(idc);
       if(!el){ el = document.createElement('section'); el.id = idc; el.className='view'; DOM.main.appendChild(el); }
       [...document.querySelectorAll('.view')].forEach(v => v.classList.remove('active'));
       el.classList.add('active');
-
-      // resolve renderer
-      const keys = [
-        'render_'+name.replace(/\s+/g,'_'),
-        'render_'+name.replace(/\s+/g,'')
-      ];
-      for(const k of keys){
-        if(typeof V[k]==='function'){ V[k](el); return; }
-      }
+      const keys = ['render_'+name.replace(/\s+/g,'_'),'render_'+name.replace(/\s+/g,'')];
+      for(const k of keys){ if(typeof V[k]==='function'){ V[k](el); return; } }
       el.innerHTML = '<div class="card"><div class="body">View not found: '+name+'</div></div>';
-    }catch(err){
-      console.error(err);
-      alert('Render error in '+name+': '+(err.message||err));
-    }
+    }catch(err){ console.error(err); alert('Render error in '+name+': '+(err.message||err)); }
   }
 
   function openDrawer(title, html){
@@ -323,7 +320,6 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     const rows = [];
     const d = today();
     for(const s of S.staff){
-      // find if worked today
       const sess = S.sessions.filter(x => x.staffId===s.id && x.date===d);
       if(sess.length){
         const centre = sess[0].centre || (s.defaultWorksite||'');
@@ -351,7 +347,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
           <div class="head"><b>Notice Board</b></div>
           <div class="body" id="nb-list">
             ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-              <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+              <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
                 <div class="row" style="justify-content:space-between">
                   <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
                 </div>
@@ -429,12 +425,12 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       <div class="card">
         <div class="head"><b>Shift Planner</b></div>
         <div class="body">
-          <form id="f-shift" class="grid cols-3">
+          <form id="f-shift" class="grid cols-3" novalidate>
             <div><label>Date</label><input id="sh-date" type="date" class="input" value="${today()}" required></div>
-            <div><label>Centre</label><select id="sh-centre" class="input">${optionsCentre}</select></div>
-            <div><label>Staff</label><select id="sh-staff" class="input">${optionsStaff}</select></div>
-            <div><label>Start</label><input id="sh-start" type="time" class="input" value="09:00"></div>
-            <div><label>End</label><input id="sh-end" type="time" class="input" value="17:00"></div>
+            <div><label>Centre</label><select id="sh-centre" class="input" required>${optionsCentre}</select></div>
+            <div><label>Staff</label><select id="sh-staff" class="input" required>${optionsStaff}</select></div>
+            <div><label>Start</label><input id="sh-start" type="time" class="input" value="09:00" required></div>
+            <div><label>End</label><input id="sh-end" type="time" class="input" value="17:00" required></div>
             <div><label>Notes</label><input id="sh-notes" class="input" placeholder="Optional"></div>
             <div style="align-self:end"><button class="btn primary" style="width:100%">Add Shift</button></div>
           </form>
@@ -449,15 +445,13 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     `;
     el.querySelector('#f-shift').onsubmit = e => {
       e.preventDefault();
-      const sh = {
-        id: id(),
-        date: el.querySelector('#sh-date').value,
-        centre: el.querySelector('#sh-centre').value,
-        staffId: el.querySelector('#sh-staff').value,
-        start: el.querySelector('#sh-start').value,
-        end: el.querySelector('#sh-end').value,
-        notes: el.querySelector('#sh-notes').value
-      };
+      const date = el.querySelector('#sh-date').value;
+      const centre = el.querySelector('#sh-centre').value;
+      const staffId = el.querySelector('#sh-staff').value;
+      const start = el.querySelector('#sh-start').value;
+      const end = el.querySelector('#sh-end').value;
+      if(!date || !centre || !staffId || !start || !end){ alert('Please fill all required fields.'); return; }
+      const sh = { id: id(), date, centre, staffId, start, end, notes: el.querySelector('#sh-notes').value };
       (S.shifts ||= []).push(sh); save(); show('Shift Planner');
     };
     el.querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => {
@@ -473,13 +467,13 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
         <div class="card">
           <div class="head"><b>Add Staff</b></div>
           <div class="body">
-            <form id="f-add">
+            <form id="f-add" novalidate>
               <label>ID</label><input id="st-id" class="input" required>
               <label>Name</label><input id="st-name" class="input" required>
               <label>Role</label><input id="st-role" class="input" required>
               <label>PIN (4 digits)</label><input id="st-pin" class="input" inputmode="numeric" maxlength="6" placeholder="e.g., 1234" required>
               <label>Default Centre</label>
-              <select id="st-centre" class="input">${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
+              <select id="st-centre" class="input" required>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
               <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
             </form>
           </div>
@@ -585,11 +579,11 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
         <div class="card">
           <div class="head"><b>Submit Leave (Admin)</b></div>
           <div class="body">
-            <form id="f-leave">
+            <form id="f-leave" novalidate>
               <label>Staff</label>
-              <select id="lv-staff" class="input">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
-              <label>Date</label><input id="lv-date" type="date" class="input" value="${today()}">
-              <label>Type</label><select id="lv-type" class="input"><option>Full</option><option>Half</option><option>Short</option></select>
+              <select id="lv-staff" class="input" required>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
+              <label>Date</label><input id="lv-date" type="date" class="input" value="${today()}" required>
+              <label>Type</label><select id="lv-type" class="input" required><option>Full</option><option>Half</option><option>Short</option></select>
               <div id="lv-mins-wrap" class="hidden"><label>Minutes (Short)</label><input id="lv-mins" class="input" type="number" placeholder="60"></div>
               <label>Reason</label><textarea id="lv-reason" class="input"></textarea>
               <button class="btn primary" style="width:100%;margin-top:8px">Submit (Approved)</button>
@@ -646,9 +640,9 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       <div class="card">
         <div class="head"><b>Holidays</b></div>
         <div class="body">
-          <form id="f-hol" class="grid cols-3">
-            <div><label>Date</label><input id="h-date" type="date" class="input"></div>
-            <div><label>Title</label><input id="h-title" class="input"></div>
+          <form id="f-hol" class="grid cols-3" novalidate>
+            <div><label>Date</label><input id="h-date" type="date" class="input" required></div>
+            <div><label>Title</label><input id="h-title" class="input" required></div>
             <div style="align-self:end"><button class="btn primary" style="width:100%">Add</button></div>
           </form>
           <div class="table-wrap" style="margin-top:12px"><table>
@@ -701,14 +695,14 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     `;
   };
 
-  // --- Admin: Rewards (simple point add)
+  // --- Admin: Rewards
   V.render_Rewards = el => {
     el.innerHTML = `
       <div class="grid cols-2">
         <div class="card"><div class="head"><b>Award Points</b></div><div class="body">
-          <form id="f-rew">
-            <label>Staff</label><select id="rw-staff" class="input">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
-            <label>Points</label><input id="rw-points" class="input" type="number" value="10">
+          <form id="f-rew" novalidate>
+            <label>Staff</label><select id="rw-staff" class="input" required>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
+            <label>Points</label><input id="rw-points" class="input" type="number" value="10" required>
             <label>Reason</label><input id="rw-reason" class="input" placeholder="Event, OT, etc.">
             <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
           </form>
@@ -738,29 +732,54 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       <div class="card">
         <div class="head"><b>Settings</b></div>
         <div class="body">
-          <form id="f-set" class="grid cols-2">
-            <div><label>Organization</label><input id="s-org" class="input" value="${S.settings.org||''}"></div>
-            <div><label>Daily Break (mins)</label><input id="s-break" class="input" type="number" value="${S.settings.breakMins||30}"></div>
-            <div><label>Target Work (mins)</label><input id="s-target" class="input" type="number" value="${S.settings.targetMins||480}"></div>
-            <div><label>Half-day Cap (mins)</label><input id="s-half" class="input" type="number" value="${S.settings.halfDayMins||240}"></div>
-            <div class="grid"><label>Centres</label>
-              <textarea id="s-centres" class="input" rows="4" placeholder="One per line">${(S.settings.centres||[]).join('\\n')}</textarea>
+          <form id="f-set" class="grid cols-2" novalidate>
+            <div><label>Organization</label><input id="s-org" class="input" value="${S.settings.org||''}" required></div>
+            <div><label>Daily Break (mins)</label><input id="s-break" class="input" type="number" value="${S.settings.breakMins||30}" required></div>
+            <div><label>Target Work (mins)</label><input id="s-target" class="input" type="number" value="${S.settings.targetMins||480}" required></div>
+            <div><label>Half-day Cap (mins)</label><input id="s-half" class="input" type="number" value="${S.settings.halfDayMins||240}" required></div>
+            <div>
+              <label>Centres</label>
+              <div id="centres-list" class="small" style="border:1px dashed var(--line);padding:8px;border-radius:8px;max-height:160px;overflow:auto;margin-bottom:8px"></div>
+              <div class="row">
+                <input id="centre-new" class="input" placeholder="Add a centre (one at a time)">
+                <button id="centre-add" type="button" class="btn small">Add</button>
+              </div>
             </div>
             <div><label>Webhook URL</label><input id="s-webhook" class="input" placeholder="https://.../mls_daily_state.json" value="${S.settings.webhook||''}"></div>
             <div style="align-self:end"><button class="btn primary" style="width:100%">Save</button></div>
           </form>
+          <div class="small" style="margin-top:8px">
+            • Firebase Realtime DB: use an endpoint ending with <code>.json</code> (PUT/GET).<br/>
+            • Other endpoints: we send a JSON <code>POST</code>. If you see “opaque” in the message, it usually means the server blocked CORS but still received the request.
+          </div>
         </div>
       </div>
     `;
+    const listEl = el.querySelector('#centres-list');
+    function renderCentres(){
+      const cs = S.settings.centres||[];
+      if(!cs.length){ listEl.innerHTML = '<div class="small">No centres yet.</div>'; return; }
+      listEl.innerHTML = cs.map((c,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0">
+         <span>${c}</span>
+         <button type="button" class="btn small danger" data-del="${i}">Remove</button>
+      </div>`).join('');
+      listEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ const idx=+b.getAttribute('data-del'); cs.splice(idx,1); S.settings.centres=cs; save(); renderCentres(); populateCentreSelect(); });
+    }
+    renderCentres();
+    el.querySelector('#centre-add').onclick = ()=>{
+      const inp = el.querySelector('#centre-new'); const v = (inp.value||'').trim(); if(!v) return;
+      (S.settings.centres ||= []); S.settings.centres.push(v); save(); inp.value=''; renderCentres(); populateCentreSelect();
+    };
     el.querySelector('#f-set').onsubmit = e => {
       e.preventDefault();
       S.settings.org = el.querySelector('#s-org').value;
       S.settings.breakMins = +el.querySelector('#s-break').value||30;
       S.settings.targetMins = +el.querySelector('#s-target').value||480;
       S.settings.halfDayMins = +el.querySelector('#s-half').value||240;
-      S.settings.centres = el.querySelector('#s-centres').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       S.settings.webhook = el.querySelector('#s-webhook').value.trim();
+      if(!Array.isArray(S.settings.centres) || !S.settings.centres.length){ S.settings.centres = centresDefault.slice(); }
       save(); alert('Saved.');
+      populateCentreSelect();
     };
   };
 
@@ -783,7 +802,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       if(!arr || !arr.length) return '';
       const head = Object.keys(arr[0]);
       const rows = arr.map(o => head.map(k => JSON.stringify(o[k] ?? '')).join(','));
-      return head.join(',') + '\\n' + rows.join('\\n');
+      return head.join(',') + '\n' + rows.join('\n');
     };
     el.querySelector('#ex-staff').onclick = ()=> download('staff.csv', toCSV(S.staff||[]));
     el.querySelector('#ex-sess').onclick = ()=> download('sessions.csv', toCSV(S.sessions||[]));
@@ -797,7 +816,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     el.innerHTML = `
       <div class="grid cols-2">
         <div class="card"><div class="head"><b>Post Notice</b></div><div class="body">
-          <form id="f-notice">
+          <form id="f-notice" novalidate>
             <label>Title</label><input id="n-title" class="input" required>
             <label>Body</label><textarea id="n-body" class="input" rows="3" required></textarea>
             <label>Centre</label><select id="n-centre" class="input"><option>All</option>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`)}</select>
@@ -806,7 +825,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
         </div></div>
         <div class="card"><div class="head"><b>All Notices</b></div><div class="body" id="n-list">
           ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-            <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+            <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
               <div class="row" style="justify-content:space-between">
                 <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
               </div>
@@ -825,7 +844,6 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
 
   // --- Admin: Payroll (basic OT calc)
   V.render_Payroll = el => {
-    // Simple calculation: OT if worked > targetMins per day
     const rows = [];
     for(const s of S.staff){
       const sess = S.sessions.filter(x=>x.staffId===s.id && x.date>=startOfMonth());
@@ -868,15 +886,15 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     `;
   };
 
-  // --- Staff: Clock (clock in/out + breaks)
+  // --- Staff: Clock
   V.render_Clock = el => {
     const d = today();
     const mySess = S.sessions.filter(s=>s.staffId===user.id && s.date===d);
     const record = (type) => {
-      // simple: create/update a single session for today
+      if(!worksite){ alert('Please select a centre at login.'); return; }
       let s = S.sessions.find(x=>x.staffId===user.id && x.date===d);
-      if(!s){ s = { id:id(), staffId:user.id, date:d, clockIn:'', clockOut:'', centre: worksite }; S.sessions.push(s); }
       const now = new Date(); const t = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      if(!s){ s = { id:id(), staffId:user.id, date:d, clockIn:'', clockOut:'', centre: worksite }; S.sessions.push(s); }
       if(type==='in'){ s.clockIn = t; s.centre = worksite; }
       if(type==='break'){ (S.breaks ||= []).push({ id:id(), staffId:user.id, date:d, start:t }); }
       if(type==='resume'){ const b=(S.breaks||[]).reverse().find(b=>b.staffId===user.id && b.date===d && !b.end); if(b) b.end=t; }
@@ -909,9 +927,9 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     el.innerHTML = `
       <div class="grid cols-2">
         <div class="card"><div class="head"><b>Request Leave</b></div><div class="body">
-          <form id="f-my-leave">
-            <label>Date</label><input id="s-date" type="date" class="input" value="${today()}">
-            <label>Type</label><select id="s-type" class="input"><option>Full</option><option>Half</option><option>Short</option></select>
+          <form id="f-my-leave" novalidate>
+            <label>Date</label><input id="s-date" type="date" class="input" value="${today()}" required>
+            <label>Type</label><select id="s-type" class="input" required><option>Full</option><option>Half</option><option>Short</option></select>
             <div id="s-minwrap" class="hidden"><label>Minutes</label><input id="s-min" class="input" type="number" placeholder="60"></div>
             <label>Reason</label><textarea id="s-reason" class="input"></textarea>
             <button class="btn primary" style="width:100%;margin-top:8px">Submit</button>
@@ -933,24 +951,24 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     };
   };
 
-  // --- Staff: My Requests (incl. salary)
+  // --- Staff: My Requests + Salary
   V.render_My_Requests = el => {
     const list = (S.inbox||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     const sal = (S.salaryRequests||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     el.innerHTML = `
       <div class="grid cols-2">
         <div class="card"><div class="head"><b>New Request</b></div><div class="body">
-          <form id="f-req">
-            <label>Type</label><select id="rq-type" class="input"><option>message</option><option>equipment</option></select>
+          <form id="f-req" novalidate>
+            <label>Type</label><select id="rq-type" class="input" required><option>message</option><option>equipment</option></select>
             <label>Subject</label><input id="rq-subj" class="input" required>
             <label>Message</label><textarea id="rq-body" class="input" rows="3"></textarea>
             <button class="btn primary" style="width:100%;margin-top:8px">Send</button>
           </form>
           <div style="margin-top:16px;border-top:1px dashed var(--line);padding-top:12px">
             <b>Salary Request</b>
-            <form id="f-salary" style="margin-top:8px">
-              <label>Amount</label><input id="sr-amt" class="input" type="number" placeholder="25000">
-              <label>Reason</label><input id="sr-rsn" class="input" placeholder="Advance for ...">
+            <form id="f-salary" style="margin-top:8px" novalidate>
+              <label>Amount</label><input id="sr-amt" class="input" type="number" placeholder="25000" required>
+              <label>Reason</label><input id="sr-rsn" class="input" placeholder="Advance for ..." required>
               <button class="btn" style="width:100%;margin-top:8px">Submit Salary Request</button>
             </form>
           </div>
@@ -993,7 +1011,7 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     el.innerHTML = `
       <div class="card"><div class="head"><b>Notice Board</b></div><div class="body">
         ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-          <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+          <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
             <div class="row" style="justify-content:space-between">
               <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
             </div>
@@ -1043,9 +1061,34 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
   };
 
   // ===== G. GLOBAL EVENTS =====
+  function populateCentreSelect(){
+    const list = (S.settings?.centres && S.settings.centres.length) ? S.settings.centres : centresDefault;
+    DOM.site.innerHTML = '<option value="" disabled selected>Select centre</option>' + list.map(c=>`<option>${c}</option>`).join('');
+  }
+
+  async function testWebhook(){
+    const url=S.settings.webhook; if(!url){ alert('Webhook URL is empty. Set it in Settings.'); return; }
+    try{
+      const r = await fetch(url, { method:'GET' });
+      if(r.ok){
+        const ct = r.headers.get('content-type')||'';
+        if(ct.includes('application/json')){
+          await r.json(); alert('Webhook reachable and returned JSON ✓');
+        }else{
+          alert('Webhook reachable ✓ (non-JSON response)');
+        }
+      }else{
+        alert('Webhook responded with '+r.status+' '+r.statusText);
+      }
+    }catch(e){
+      alert('Could not reach webhook (likely CORS). If this is a Google Apps Script or non-CORS endpoint, Sync will still POST but the browser hides the response.');
+    }
+  }
+
   function bindGlobal(){
     DOM.logout.onclick = () => { user=null; worksite=''; DOM.app.classList.add('hidden'); DOM.login.classList.remove('hidden'); };
     DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
+    DOM.testWebhook.onclick = testWebhook;
 
     DOM.sync.onclick = async () => {
       const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set.');
@@ -1055,8 +1098,8 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
           if(!r.ok) throw new Error(r.status+' '+r.statusText);
           alert('Synced to Firebase.');
         }else{
-          const r = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(S)});
-          if(r.type==='opaque' || r.ok){ alert('Sync sent.'); } else { throw new Error(r.status+' '+r.statusText); }
+          const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+          if(r.type==='opaque' || r.ok){ alert('Sync sent (response hidden by CORS is normal).'); } else { throw new Error(r.status+' '+r.statusText); }
         }
       }catch(e){ alert('Sync failed: '+e.message); }
     };
@@ -1065,39 +1108,25 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
       const loaded = await fetchCloudState(); alert(loaded?'Loaded latest data.':'Could not load.');
       if(user) show((user.role==='Admin')? 'Today' : 'My Dashboard');
     };
-
-    // Admin Safe + Reset
-    DOM.adminSafe.onclick = () => {
-      const centres = S.settings.centres||[]; user={id:'admin',name:'Admin',role:'Admin'}; worksite=centres[0]||'';
-      DOM.login.classList.add('hidden'); DOM.app.classList.remove('hidden'); renderHeader(); renderTabs(); show('Today');
-    };
-    DOM.resetApp.onclick = () => { localStorage.removeItem(KEY); alert('Cleared. Reloading...'); location.reload(); };
   }
 
   // ===== H. LOGIN HANDLER =====
   DOM.frm.addEventListener('submit', async (e) => {
     e.preventDefault(); DOM.err.textContent='';
     try{
-      const raw = (DOM.pin.value||'').toString().normalize('NFKC');
-      const pin = raw.replace(/\D+/g,'');
+      const pin = (DOM.pin.value||'').toString().normalize('NFKC').replace(/\D+/g,'');
+      const site = DOM.site.value;
+      if(!site){ DOM.err.textContent='Please select a centre.'; DOM.site.focus(); return; }
       if(!pin){ DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return; }
 
-      let site = DOM.site.value || '';
-      // local match
       let cand = matchPIN(pin);
-
-      // cloud fallback
       if(!cand){
         DOM.err.textContent = 'Checking cloud…';
         const got = await fetchCloudState();
-        if(got){ cand = matchPIN(pin); }
+        cand = got ? matchPIN(pin) : null;
       }
       if(!cand){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
 
-      if(!site){
-        const staff = S.staff.find(s=>s.id===cand.id);
-        site = (staff?.defaultWorksite) || (S.settings.centres?.[0] || '');
-      }
       user = { id:cand.id, name:cand.name, role:cand.role };
       worksite = site;
 
@@ -1110,10 +1139,8 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
         navigator.geolocation.getCurrentPosition(p=>commitLogin(p.coords), _=>commitLogin(), { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
       } else commitLogin();
 
-      // enter app
       DOM.login.classList.add('hidden'); DOM.app.classList.remove('hidden'); renderHeader(); renderTabs();
-      const def = (user.role==='Admin')? 'Today' : 'My Dashboard';
-      show(def);
+      show((user.role==='Admin')? 'Today' : 'My Dashboard');
       DOM.pin.value='';
     }catch(err){
       console.error(err); DOM.err.textContent = 'Login error: '+(err.message||err);
@@ -1123,9 +1150,8 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
   // ===== I. INIT =====
   function init(){
     load();
-    // populate centre select
-    DOM.site.innerHTML = '<option value="">(choose)</option>' + (S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('');
     bindGlobal();
+    populateCentreSelect();
   }
 
   document.addEventListener('DOMContentLoaded', init);
