@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  <title>MLS Daily (Last, Fixed)</title>
+  <title>MLS DAILY</title>
   <meta name="theme-color" content="#2ecc71" />
   <style>
     :root{
@@ -63,7 +63,7 @@
 <body class="light">
   <section id="login">
     <div class="login-box card">
-      <h2 class="brand">MLS <b>Attendance</b> — Final Pro</h2>
+      <h2 class="brand">MLS <b>DAILY</b> — Final Pro</h2>
       <p class="note">Enter your PIN and select your location.</p>
       <form id="login-form" autocomplete="off">
         <div>
@@ -82,9 +82,6 @@
           </select>
         </div>
         <button class="btn" style="width:100%;margin-top:8px">Login</button>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-          <button id="importOrg" type="button" class="btn secondary" title="Paste code from Settings to load the same data on this device">Load Org Code</button>
-        </div>
       </form>
       <p class="note" style="margin-top:8px">If allowed, geolocation is stored with your login.</p>
       <p id="login-error" style="color:var(--red);min-height:1.25rem;margin:6px 0 0 0"></p>
@@ -93,7 +90,7 @@
 
   <section id="app" class="app">
     <header class="sticky">
-      <div class="brand">MLS <b>Attendance</b></div>
+      <div class="brand">MLS <b>DAILY</b></div>
       <div class="actions">
         <span id="badge" class="badge staff"></span>
         <span id="loc" class="loc-pill"></span>
@@ -110,13 +107,13 @@
     <main id="main"></main>
   </section>
 
-  <div id="overlay"></div>
+  
   <aside id="drawer">
     <div class="drawer-head">
       <strong id="drawer-title">Details</strong>
       <button id="drawer-close" class="btn danger" style="padding:6px 10px">Close</button>
     </div>
-    <div id="drawer-body" style="padding:var(--space);overflow:auto"></div>
+    
   </aside>
 
   <script>
@@ -131,9 +128,7 @@
       badge:document.getElementById('badge'), loc:document.getElementById('loc'),
       logout:document.getElementById('logout'), sync:document.getElementById('sync'), loadCloud:document.getElementById('loadCloud'),
       overlay:document.getElementById('overlay'), drawer:document.getElementById('drawer'), dtitle:document.getElementById('drawer-title'), dbody:document.getElementById('drawer-body'), dclose:document.getElementById('drawer-close'),
-      theme:document.getElementById('theme'),
-      importOrg:document.getElementById('importOrg')
-    };
+      theme:document.getElementById('theme')};
     const TABS={
       Admin:['Today','Attendance','Leaves','Holidays','Inbox','Staff','Rewards','Shift Planner','Notice Board','Settings','Export','Payroll'],
       Staff:['My Dashboard','My Leaves','My Requests','My Profile','Notice Board','Company Holidays']
