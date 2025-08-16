@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>MLS Attendance — FINAL PRO (Last)</title>
+  <meta name="theme-color" content="#2ecc71" />
+  <style>
+    :root{
+      --green:#2ecc71;--green-dark:#27ae60;--dark-bg:#121212;--dark-card:#1d1d1d;--dark-border:#2a2a2a;--dark-text:#eeeeee;--dark-subtle:#9aa0a6;
+      --light-bg:#f6f9fc;--light-card:#ffffff;--light-border:#e6ecf1;--light-text:#1f2937;--light-subtle:#6b7280;
+      --red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;--orange:#f97316;--purple:#8b5cf6;
+      --radius:12px;--space:16px;--shadow:0 8px 24px rgba(0,0,0,.08);
+    }
+    .dark{--bg:var(--dark-bg);--card:var(--dark-card);--border:var(--dark-border);--text:var(--dark-text);--muted:var(--dark-subtle);--elev:rgba(0,0,0,.35)}
+    .light{--bg:var(--light-bg);--card:var(--light-card);--border:var(--light-border);--text:var(--light-text);--muted:var(--light-subtle);--elev:rgba(0,0,0,.08)}
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+    .app{display:none}
+    .hidden{display:none!important}
+    header.sticky{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--border);box-shadow:0 4px 16px var(--elev);padding:10px var(--space);display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .brand{font-weight:800;letter-spacing:.2px}.brand b{color:var(--green)}
+    .actions{display:flex;align-items:center;gap:10px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.85rem;color:#fff}
+    .admin{background:var(--blue)} .staff{background:var(--green)} .logout{background:var(--red);cursor:pointer}
+    .loc-pill{font-size:.85rem;color:var(--muted)}
+    nav.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px var(--space);border-bottom:1px solid var(--border)}
+    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:#fff;font-weight:700;cursor:pointer;transition:transform .05s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:var(--muted);color:#fff}
+    .btn.danger{background:var(--red)}
+    .btn.tab{background:var(--muted)} .btn.tab.active{background:var(--green)}
+    main{padding:var(--space)}
+    .view{display:none;animation:fade .25s ease} .view.active{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--space);margin-bottom:var(--space)}
+    h3{margin:0 0 8px 0;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    .grid{display:grid;gap:var(--space)} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+    input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+    label{font-weight:700;font-size:.9rem;margin-bottom:6px;display:block}
+    .note{color:var(--muted);font-size:.9rem}
+    .table{max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:12px}
+    table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
+    thead th{position:sticky;top:0;background:var(--card);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+    .chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.8rem;color:#fff}
+    .Pending{background:var(--yellow);color:#111} .Approved{background:var(--green)} .Rejected{background:var(--red)}
+    .Late{background:var(--orange)} .Early{background:var(--purple)} .Overtime{background:var(--blue)}
+    /* Login */
+    #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .login-box{max-width:420px;width:100%}
+    /* Drawer */
+    #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:.2s;z-index:1050}
+    #drawer{position:fixed;top:0;right:-560px;width:90%;max-width:560px;height:100%;background:var(--card);border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.25);transition:.3s;z-index:1100;display:flex;flex-direction:column}
+    #overlay.show{opacity:1;visibility:visible} #drawer.show{right:0}
+    .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:12px var(--space);border-bottom:1px solid var(--border)}
+    /* Sticky mobile actions */
+    .dock{position:sticky;bottom:0;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:10px;display:flex;gap:8px;box-shadow:0 -6px 24px var(--elev)}
+    @media (max-width:640px){.dock .btn{flex:1}}
+  </style>
+</head>
+<body class="light">
+  <section id="login">
+    <div class="login-box card">
+      <h2 class="brand">MLS <b>Attendance</b> — Final Pro</h2>
+      <p class="note">Enter your PIN and select your location.</p>
+      <form id="login-form">
+        <div>
+          <label for="pin">PIN</label>
+          <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="4 digits" />
+        </div>
+        <div>
+          <label for="site">Worksite</label>
+          <select id="site" required>
+            <option value="">Select location…</option>
+            <option>MLS - Colombo 4</option>
+            <option>Finnish Preschool - Park Road</option>
+            <option>Forest School - Piliyandala</option>
+            <option>SenSoMo - One Galle Face</option>
+            <option>Forest School - Cape Weligama</option>
+          </select>
+        </div>
+        <button class="btn" style="width:100%;margin-top:8px">Login</button>
+      </form>
+      <p class="note" style="margin-top:8px">If allowed, geolocation is stored with your login.</p>
+      <p id="login-error" style="color:var(--red);min-height:1.25rem;margin:6px 0 0 0"></p>
+    </div>
+  </section>
+
+  <section id="app" class="app">
+    <header class="sticky">
+      <div class="brand">MLS <b>Attendance</b></div>
+      <div class="actions">
+        <span id="badge" class="badge staff"></span>
+        <span id="loc" class="loc-pill"></span>
+        <button id="sync" class="btn secondary">Sync</button>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input id="theme" type="checkbox" onchange="document.body.className=this.checked?'dark':'light'">
+          <span class="note">Dark</span>
+        </label>
+        <span id="logout" class="badge logout">Logout</span>
+      </div>
+    </header>
+    <nav id="tabs" class="tabs"></nav>
+    <main id="main"></main>
+  </section>
+
+  <div id="overlay"></div>
+  <aside id="drawer">
+    <div class="drawer-head">
+      <strong id="drawer-title">Details</strong>
+      <button id="drawer-close" class="btn danger" style="padding:6px 10px">Close</button>
+    </div>
+    <div id="drawer-body" style="padding:var(--space);overflow:auto"></div>
+  </aside>
+
+  <script>
+  (function(){
+    'use strict';
+    const KEY='mls_state_final_pro_last';
+    const LOCS=['MLS - Colombo 4','Finnish Preschool - Park Road','Forest School - Piliyandala','SenSoMo - One Galle Face','Forest School - Cape Weligama'];
+    const DOM={
+      app:document.getElementById('app'), login:document.getElementById('login'),
+      frm:document.getElementById('login-form'), pin:document.getElementById('pin'), site:document.getElementById('site'), err:document.getElementById('login-error'),
+      tabs:document.getElementById('tabs'), main:document.getElementById('main'),
+      badge:document.getElementById('badge'), loc:document.getElementById('loc'),
+      logout:document.getElementById('logout'), sync:document.getElementById('sync'),
+      overlay:document.getElementById('overlay'), drawer:document.getElementById('drawer'), dtitle:document.getElementById('drawer-title'), dbody:document.getElementById('drawer-body'), dclose:document.getElementById('drawer-close'),
+      theme:document.getElementById('theme')
+    };
+    const TABS={
+      Admin:['Today','Attendance','Leaves','Holidays','Inbox','Staff','Rewards','Shift Planner','Notice Board','Settings','Export','Payroll'],
+      Staff:['My Dashboard','My Leaves','My Requests','My Profile','Notice Board','Company Holidays']
+    };
+    let S={}, user=null, worksite=null;
+
+    // Utils
+    const id=()=>crypto?.randomUUID?.()||('id_'+Date.now()+'_'+Math.random().toString(36).slice(2,9));
+    const today=()=>new Date().toISOString().split('T')[0];
+    const now=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+    const toMin=t=>{if(!t||!t.includes(':'))return 0; const [h,m]=t.split(':').map(Number); return h*60+m;};
+    const hhmm=m=>{if(!m||m<0)return '00:00'; const h=Math.floor(m/60), mm=Math.round(m%60); return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');};
+    const fmt=d=>new Date(d).toLocaleDateString('en-CA'); const fmtDT=d=>new Date(d).toLocaleString();
+
+    // State
+    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}catch{seed();}}
+    function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){alert('Storage error: '+e.message);}}
+    function seed(){
+      S={ settings:{org:'MLS Innovations',breakMins:30,targetMins:480,halfDayMins:240,workdayStart:'09:00',workdayEnd:'17:30',payPeriodStart:'2025-08-01',payPeriodEnd:'2025-08-31',webhook:'',rewardPoints:{holiday:5,overtimePerHour:1,eventDefault:10}},
+          staff:[{id:'1001',name:'John Doe',role:'Developer',pin:'1001',active:true,defaultWorksite:LOCS[0]},{id:'1002',name:'Jane Smith',role:'Designer',pin:'1002',active:true,defaultWorksite:LOCS[1]},{id:'1003',name:'Peter Jones',role:'QA Engineer',pin:'1003',active:false,defaultWorksite:LOCS[2]}],
+          profiles:{ '1001':{info:{fullName:'Johnathan Doe',email:'john.d@example.com',phone:'0771234567',address:'123 Main St, Colombo',idNo:'901234567V',dob:'1990-05-15',qualifications:'BSc in CS',joinDate:'2023-01-10',remarks:'Team lead for Project X'},attachments:[],performance:{points:120},pthist:[]},
+                     '1002':{info:{fullName:'Jane A. Smith',email:'jane.s@example.com',phone:'0719876543',address:'456 Galle Rd, Dehiwala',idNo:'927654321V',dob:'1992-11-20',qualifications:'BA in Design',joinDate:'2023-03-15',remarks:''},attachments:[],performance:{points:65},pthist:[]}},
+          sessions:[{id:id(),staffId:'1001',date:'2025-08-11',clockIn:'09:01',clockOut:'17:35',breaks:[{start:'13:00',end:'13:30'}],location:LOCS[0]},{id:id(),staffId:'1002',date:'2025-08-11',clockIn:'09:15',clockOut:'17:45',breaks:[{start:'13:05',end:'13:35'}],location:LOCS[1]}],
+          live:{}, leaves:[{id:id(),staffId:'1001',type:'Half',date:'2025-08-12',minutes:240,reason:'Doctor appointment',status:'Approved',createdAt:new Date().toISOString()}],
+          holidays:[{date:'2025-08-20',title:'Poya Day'}], inbox:[], rewards:[], shifts:[], logins:[], notices:[] };
+      save();
+    }
+
+    const staffName = sid => (S.staff.find(s=>s.id===sid)||{}).name || 'Unknown';
+
+    // Work math
+    const breakMins = s => (s.breaks||[]).reduce((a,b)=>a+(toMin(b.end||now())-toMin(b.start)),0);
+    function workedMinutes(sid, d){
+      const list = S.sessions.filter(s=>s.staffId===sid && s.date===d);
+      const live = S.live[sid]; if(live && live.date===d) list.push({clockIn:live.clockIn,clockOut:now(),breaks:live.breaks||[]});
+      const leaves = S.leaves.filter(l=>l.staffId===sid && l.date===d && l.status==='Approved');
+      if(leaves.some(l=>l.type==='Full'||l.type==='Annual'||l.minutes>=S.settings.targetMins)) return 0;
+      const total = list.reduce((a,s)=>a+(toMin(s.clockOut)-toMin(s.clockIn)),0);
+      if(total<=0) return 0;
+      const anyBreak = list.some(s=>(s.breaks||[]).length>0);
+      let w = total - (anyBreak ? list.reduce((a,s)=>a+breakMins(s),0) : S.settings.breakMins);
+      const short = leaves.filter(l=>l.type==='Short').reduce((a,l)=>a+l.minutes,0);
+      w -= short;
+      if(leaves.some(l=>l.type==='Half')) w = Math.min(w, S.settings.halfDayMins);
+      return Math.max(0,w);
+    }
+    const isHoliday = d => S.holidays.some(h=>h.date===d);
+    function lateEarlyOT(sid, d){
+      const list = S.sessions.filter(s=>s.staffId===sid && s.date===d);
+      const live = S.live[sid]; if(live && live.date===d) list.push({clockIn:live.clockIn,clockOut:now(),breaks:live.breaks||[]});
+      if(!list.length) return {late:0,early:0,ot:0};
+      const start = toMin(S.settings.workdayStart), end = toMin(S.settings.workdayEnd);
+      const first = Math.min(...list.map(s=>toMin(s.clockIn)));
+      const last  = Math.max(...list.map(s=>toMin(s.clockOut)));
+      const late  = Math.max(0, first - start);
+      const early = Math.max(0, end - last);
+      const worked = workedMinutes(sid,d);
+      const target = isHoliday(d) ? 0 : S.settings.targetMins;
+      const ot = Math.max(0, worked - target);
+      return {late,early,ot};
+    }
+
+    // Rewards
+    function awardPoints(sid, pts, reason){
+      const p = S.profiles[sid] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
+      p.performance.points = (p.performance.points||0) + pts;
+      p.pthist.unshift({date:new Date().toISOString(),points:pts,reason});
+      save();
+    }
+    function autoRewardOnFinalize(sid, d){
+      if(isHoliday(d)) awardPoints(sid, S.settings.rewardPoints.holiday, 'Worked on holiday');
+      const otH = Math.floor(lateEarlyOT(sid,d).ot/60); if(otH>0) awardPoints(sid, otH*S.settings.rewardPoints.overtimePerHour, `Overtime ${otH}h`);
+    }
+
+    // Drawer
+    const openDrawer=(title,html)=>{DOM.dtitle.textContent=title; DOM.dbody.innerHTML=html; DOM.overlay.classList.add('show'); DOM.drawer.classList.add('show');};
+    const closeDrawer=()=>{DOM.overlay.classList.remove('show'); DOM.drawer.classList.remove('show');};
+
+    // LOGIN
+    DOM.frm.addEventListener('submit', ev=>{
+      ev.preventDefault(); DOM.err.textContent='';
+      const pin = (DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
+      const site = DOM.site.value;
+      if(!pin){DOM.err.textContent='Enter your PIN.'; return;}
+      if(!site){DOM.err.textContent='Select your worksite.'; return;}
+      if(pin==='0000'){ user={id:'admin',name:'Admin',role:'Admin'}; }
+      else{
+        const m = S.staff.find(s=>s.pin===pin && s.active);
+        if(m) user={id:m.id,name:m.name,role:'Staff'};
+      }
+      if(!user){DOM.err.textContent='Invalid PIN or inactive account.'; return;}
+      worksite=site;
+      const record=(coords)=>{
+        S.logins.unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
+        save();
+      };
+      if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{record(p.coords);},_=>record(),{enableHighAccuracy:true,timeout:8000,maximumAge:0});} else record();
+      DOM.login.style.display='none'; DOM.app.style.display='block';
+      renderHeader(); renderTabs(); show(TABS[user.role][0]);
+      DOM.pin.value='';
+    });
+
+    function renderHeader(){
+      DOM.badge.className='badge ' + (user.role==='Admin'?'admin':'staff');
+      DOM.badge.textContent = user.role + (user.role==='Staff' ? ' — ' + user.name : '');
+      DOM.loc.textContent = '📍 ' + (worksite||'');
+      DOM.theme.checked = (localStorage.getItem('mls_theme')==='dark');
+      document.body.className = DOM.theme.checked ? 'dark' : 'light';
+    }
+
+    function renderTabs(){
+      const tabs = TABS[user.role];
+      DOM.tabs.innerHTML = tabs.map(t=>`<button class="btn tab" data-v="${t}">${t}</button>`).join('');
+      [...DOM.tabs.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
+    }
+
+    function show(name){
+      [...document.querySelectorAll('.btn.tab')].forEach(b=>b.classList.toggle('active', b.dataset.v===name));
+      const id = 'v-'+name.replace(/\s+/g,'');
+      let el = document.getElementById(id);
+      if(!el){ el=document.createElement('section'); el.id=id; el.className='view'; DOM.main.appendChild(el); }
+      [...document.querySelectorAll('.view')].forEach(v=>v.classList.remove('active')); el.classList.add('active');
+      const fn = 'render_'+name.replace(/\s+/g,'_').replace(/[^A-Za-z_]/g,'');
+      if(V[fn]) V[fn](el); else el.innerHTML='<div class="card"><h3>'+name+'</h3><p>Loading…</p></div>';
+    }
+
+    // actions
+    DOM.logout.onclick=()=>{user=null; worksite=null; DOM.app.style.display='none'; DOM.login.style.display='flex';};
+    DOM.dclose.onclick=closeDrawer; DOM.overlay.onclick=closeDrawer;
+    DOM.sync.onclick=async()=>{
+      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
+      if(!confirm('Send all current data to the webhook?')) return;
+      try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)}); if(!r.ok) throw new Error(r.status+' '+r.statusText); alert('Sync successful');}
+      catch(e){alert('Sync failed: '+e.message);}
+    };
+    DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
+
+    // Clocking helpers (staff)
+    function clockIn(){ const idu=user.id, d=today(); if(S.live[idu]?.date===d) return alert('Already clocked in');
+      S.live[idu]={date:d,clockIn:now(),breaks:[],status:'in',location:worksite}; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
+    function startBreak(){ const L=S.live[user.id]; if(!L || L.status==='break') return alert(!L?'Clock in first':'Already on a break'); L.breaks.push({start:now(),end:null}); L.status='break'; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
+    function endBreak(){ const L=S.live[user.id]; if(!L || L.status!=='break') return alert(!L?'Clock in first':'Not on a break'); const last=L.breaks[L.breaks.length-1]; if(last && !last.end) last.end=now(); L.status='in'; save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); }
+    function clockOut(){ const L=S.live[user.id]; if(!L) return alert('Clock in first'); if(L.status==='break') return alert('End break before clocking out');
+      S.sessions.push({id:id(),staffId:user.id,date:L.date,clockIn:L.clockIn,clockOut:now(),breaks:L.breaks||[],location:L.location||worksite});
+      delete S.live[user.id]; autoRewardOnFinalize(user.id, today()); save(); V.render_My_Dashboard(document.getElementById('v-MyDashboard')); alert('Clocked out.'); }
+
+    // Views
+    const V={
+      render_Today(el){
+        const d=today();
+        const options = ['All', ...LOCS];
+        const live = Object.entries(S.live).filter(([sid,ls])=>ls.date===d).map(([sid,ls])=>({staffId:sid, ...ls, live:true}));
+        const started = S.sessions.filter(s=>s.date===d).map(s=>({staffId:s.staffId, clockIn:s.clockIn, location:s.location}));
+        const map=new Map(); started.forEach(s=>map.set(s.staffId,s)); live.forEach(s=>map.set(s.staffId,s));
+        const rows=[...map.values()];
+        el.innerHTML=`
+          <div class="card">
+            <h3>Who's In Today</h3>
+            <div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
+              <div style="flex:1">
+                <label>Filter by Centre</label>
+                <select id="tCentre">${options.map(o=>`<option>${o}</option>`).join('')}</select>
+              </div>
+            </div>
+            <div class="table" style="margin-top:8px">
+              <table id="tTbl">
+                <thead><tr><th>Staff</th><th>Location</th><th>Clocked In</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>`;
+        const tbody = el.querySelector('#tTbl tbody');
+        const renderBody=(centre)=>{
+          const list = rows
+            .filter(r=> centre==='All' || (r.location||'')===centre)
+            .sort((a,b)=>(a.location||'').localeCompare(b.location||'')||staffName(a.staffId).localeCompare(staffName(b.staffId)));
+          tbody.innerHTML = list.length ? list.map(r=>`<tr><td>${staffName(r.staffId)}</td><td>${r.location||'-'}</td><td>${r.clockIn||'-'}</td><td>${r.live?'<span class="chip Approved">IN</span>':'<span class="chip Pending">done</span>'}</td></tr>`).join('') : `<tr><td colspan="4">No one at this centre.</td></tr>`;
+        };
+        renderBody('All');
+        el.querySelector('#tCentre').onchange=(e)=>renderBody(e.target.value);
+      },
+      render_Attendance(el){
+        el.innerHTML=`
+          <div class="card">
+            <h3>Attendance Log</h3>
+            <div class="grid g4">
+              <div><label>Start</label><input type="date" id="a1" value="${new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().split('T')[0]}"></div>
+              <div><label>End</label><input type="date" id="a2" value="${today()}"></div>
+              <div><label>Staff</label><select id="as"><option value="all">All</option>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+              <div><label>Location</label><select id="al"><option value="all">All</option>${LOCS.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
+              <div style="align-self:end"><button id="af" class="btn secondary">Filter</button></div>
+            </div>
+            <div class="table" style="margin-top:10px"><table id="att"><thead><tr><th>Staff</th><th>Date</th><th>Location</th><th>Worked</th><th>Late</th><th>Early</th><th>OT</th><th>Holiday</th></tr></thead><tbody><tr><td colspan="8">Apply filters…</td></tr></tbody></table></div>
+          </div>`;
+        el.querySelector('#af').onclick=()=>{
+          const a=el.querySelector('#a1').value,b=el.querySelector('#a2').value,sf=el.querySelector('#as').value, lf=el.querySelector('#al').value;
+          const keys=new Set();
+          S.sessions.filter(s=>s.date>=a&&s.date<=b&&(sf==='all'||s.staffId===sf)&&(lf==='all'||s.location===lf)).forEach(s=>keys.add(s.staffId+'|'+s.date));
+          Object.entries(S.live).forEach(([sid,ls])=>{if(ls.date>=a&&ls.date<=b&&(sf==='all'||sid===sf)&&(lf==='all'||ls.location===lf))keys.add(sid+'|'+ls.date)});
+          const tbody=el.querySelector('#att tbody'); const rows=[...keys].map(k=>{const [sid,d]=k.split('|'); return {sid,d};});
+          if(!rows.length){tbody.innerHTML='<tr><td colspan="8">No records.</td></tr>';return;}
+          tbody.innerHTML=rows.sort((x,y)=>y.d.localeCompare(x.d)||staffName(x.sid).localeCompare(staffName(y.sid))).map(r=>{
+            const w=workedMinutes(r.sid,r.d), m=lateEarlyOT(r.sid,r.d), sess=S.sessions.find(s=>s.staffId===r.sid && s.date===r.d);
+            const loc=(S.live[r.sid]?.date===r.d && S.live[r.sid].location) || (sess?.location) || '';
+            return `<tr><td>${staffName(r.sid)}</td><td>${fmt(r.d)}</td><td>${loc||'-'}</td><td>${hhmm(w)}</td>
+            <td>${m.late?'<span class="chip Late">'+hhmm(m.late)+'</span>':'—'}</td>
+            <td>${m.early?'<span class="chip Early">'+hhmm(m.early)+'</span>':'—'}</td>
+            <td>${m.ot?'<span class="chip Overtime">'+hhmm(m.ot)+'</span>':'—'}</td>
+            <td>${isHoliday(r.d)?'Yes':'No'}</td></tr>`;
+          }).join('');
+        };
+      },
+      render_Leaves(el){
+        const all=[...S.leaves].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        el.innerHTML=`
+          <div class="grid g2">
+            <div class="card">
+              <h3>Submit Leave for Staff</h3>
+              <form id="lf">
+                <div><label>Staff</label><select id="leaveStaff">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+                <div><label>Date</label><input type="date" id="leaveDate" value="${today()}"></div>
+                <div><label>Type</label><select id="leaveType"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="minsWrap" class="hidden"><label>Minutes (Short)</label><input type="number" id="leaveMins" placeholder="60"></div>
+                <div><label>Reason</label><textarea id="leaveReason" rows="2"></textarea></div>
+                <button class="btn">Submit</button>
+              </form>
+            </div>
+            <div class="card">
+              <h3>All Leave Requests</h3>
+              <div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Staff</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>${all.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${staffName(l.staffId)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td><td><button class="btn secondary la" data-id="${l.id}" data-s="Approved">Approve</button> <button class="btn secondary la" data-id="${l.id}" data-s="Pending">Pend</button> <button class="btn danger la" data-id="${l.id}" data-s="Rejected">Reject</button></td></tr>`).join('') || `<tr><td colspan="6">No leaves.</td></tr>`}</tbody></table></div>
+            </div>
+          </div>`;
+        const type=el.querySelector('#leaveType'), wrap=el.querySelector('#minsWrap'); type.onchange=()=>{wrap.classList.toggle('hidden', type.value!=='Short');};
+        el.querySelector('#lf').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:el.querySelector('#leaveStaff').value,type:type.value,date:el.querySelector('#leaveDate').value,minutes:el.querySelector('#leaveMins').valueAsNumber||0,reason:el.querySelector('#leaveReason').value,status:'Approved',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_Leaves(el); alert('Leave submitted.');};
+        el.querySelectorAll('.la').forEach(b=>b.onclick=()=>{const it=S.leaves.find(x=>x.id===b.dataset.id); if(it){it.status=b.dataset.s; save(); V.render_Leaves(el);}});
+      },
+      render_Holidays(el){
+        el.innerHTML=`<div class="card"><h3>Company Holidays</h3>
+          <form id="hf" class="grid g2"><div><label>Date</label><input type="date" id="hd"></div><div><label>Title</label><input id="ht"></div><button class="btn">Add</button></form>
+          <div class="table" style="margin-top:10px"><table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>${S.holidays.sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmt(h.date)}</td><td>${h.title}</td></tr>`).join('') || `<tr><td colspan="2">None.</td></tr>`}</tbody></table></div></div>`;
+        el.querySelector('#hf').onsubmit=(e)=>{e.preventDefault(); const d=el.querySelector('#hd').value,t=el.querySelector('#ht').value.trim(); if(!d||!t) return alert('Fill both'); S.holidays.push({date:d,title:t}); save(); V.render_Holidays(el);};
+      },
+      render_Inbox(el){
+        const items=[...S.inbox].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        el.innerHTML=`<div class="card"><h3>Inbox</h3><div class="table"><table><thead><tr><th>When</th><th>From</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${items.map(x=>`<tr class="row" data-id="${x.id}" style="cursor:pointer"><td>${fmtDT(x.createdAt)}</td><td>${staffName(x.staffId)}</td><td>${x.subject}</td><td>${x.type}</td><td><span class="chip ${x.status}">${x.status}</span></td></tr>`).join('') || `<tr><td colspan="5">Empty</td></tr>`}</tbody></table></div></div>`;
+        el.querySelectorAll('.row').forEach(r=>r.onclick=()=>openThread(r.dataset.id));
+      },
+      render_Staff(el){
+        el.innerHTML=`<div class="grid g2">
+          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="\\d{4}" required></div><button class="btn">Add</button></form></div>
+          <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
+        </div>`;
+        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault(); const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:el.querySelector('#spin').value.trim(),active:true}; if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all'); if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists'); S.staff.push(ns); save(); V.render_Staff(el);};
+        el.querySelectorAll('.sa').forEach(b=>b.onclick=()=>{const s=S.staff.find(x=>x.id===b.dataset.id); if(!s) return; if(b.dataset.a==='remove'){if(!confirm('Remove staff?')) return; S.staff=S.staff.filter(x=>x.id!==s.id);} else s.active = !s.active; save(); V.render_Staff(el);});
+        el.querySelectorAll('.pview').forEach(b=>b.onclick=()=>openProfile(b.dataset.id));
+      },
+      render_Rewards(el){
+        const board=[...S.staff].map(s=>({name:s.name,pts:S.profiles[s.id]?.performance?.points||0})).sort((a,b)=>b.pts-a.pts);
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Award Points</h3><form id="rw"><div><label>Staff</label><select id="rwS">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Points</label><input id="rwP" type="number" value="${S.settings.rewardPoints.eventDefault}"></div><div><label>Reason</label><input id="rwR" placeholder="Event participation"></div><button class="btn">Give</button></form></div><div class="card"><h3>Leaderboard</h3><div class="table"><table><thead><tr><th>Staff</th><th>Points</th></tr></thead><tbody>${board.map(x=>`<tr><td>${x.name}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+        el.querySelector('#rw').onsubmit=(e)=>{e.preventDefault(); const sid=el.querySelector('#rwS').value, pts=Number(el.querySelector('#rwP').value)||0, reason=el.querySelector('#rwR').value||'Event participation'; awardPoints(sid,pts,reason); alert('Points awarded.'); V.render_Rewards(el);};
+      },
+      render_Shift_Planner(el){
+        const rows=[...S.shifts].sort((a,b)=>a.date.localeCompare(b.date)||staffName(a.staffId).localeCompare(staffName(b.staffId)));
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Add Shift</h3><form id="shf"><div class="grid g2"><div><label>Date</label><input type="date" id="shd" value="${today()}"></div><div><label>Location</label><select id="shl">${LOCS.map(x=>`<option>${x}</option>`).join('')}</select></div><div><label>Staff</label><select id="shs">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Start</label><input type="time" id="shst" value="09:00"></div><div><label>End</label><input type="time" id="shen" value="17:30"></div></div><div><label>Notes</label><input id="shn"></div><button class="btn">Add</button></form></div><div class="card"><h3>Shifts</h3><div class="table"><table><thead><tr><th>Date</th><th>Location</th><th>Staff</th><th>Start</th><th>End</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.location}</td><td>${staffName(r.staffId)}</td><td>${r.start}</td><td>${r.end}</td><td>${r.notes||''}</td><td><button class="btn danger del" data-id="${r.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="7">No shifts yet.</td></tr>`}</tbody></table></div></div></div>`;
+        el.querySelector('#shf').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),date:el.querySelector('#shd').value,location:el.querySelector('#shl').value,staffId:el.querySelector('#shs').value,start:el.querySelector('#shst').value,end:el.querySelector('#shen').value,notes:el.querySelector('#shn').value}; if(!o.date||!o.location||!o.staffId||!o.start||!o.end) return alert('Fill all'); S.shifts.push(o); save(); V.render_Shift_Planner(el);};
+        el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{S.shifts=S.shifts.filter(x=>x.id!==b.dataset.id); save(); V.render_Shift_Planner(el);});
+      },
+      render_Notice_Board(el){
+        if(user.role==='Admin'){
+          const all=[...S.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+          el.innerHTML=`<div class="grid g2">
+            <div class="card">
+              <h3>Post a Notice</h3>
+              <form id="nb">
+                <div><label>Audience (Centre)</label>
+                  <select id="nbSite">
+                    <option>All</option>
+                    ${LOCS.map(l=>`<option>${l}</option>`).join('')}
+                  </select>
+                </div>
+                <div><label>Title</label><input id="nbTitle" required></div>
+                <div><label>Message</label><textarea id="nbBody" rows="3" required></textarea></div>
+                <button class="btn">Publish</button>
+              </form>
+            </div>
+            <div class="card">
+              <h3>Notices</h3>
+              <div class="table"><table><thead><tr><th>When</th><th>Centre</th><th>Title</th><th></th></tr></thead><tbody>
+                ${all.map(n=>`<tr><td>${fmtDT(n.createdAt)}</td><td>${n.site}</td><td>${n.title}</td><td><button class="btn danger del" data-id="${n.id}">Delete</button></td></tr>`).join('')||`<tr><td colspan="4">No notices.</td></tr>`}
+              </tbody></table></div>
+            </div>
+          </div>`;
+          el.querySelector('#nb').onsubmit=(e)=>{e.preventDefault(); const site=el.querySelector('#nbSite').value, title=el.querySelector('#nbTitle').value.trim(), body=el.querySelector('#nbBody').value.trim(); if(!title||!body) return alert('Fill title and message'); S.notices.unshift({id:id(),site,title,body,createdAt:new Date().toISOString(),author:user.name||'Admin'}); save(); V.render_Notice_Board(el); alert('Published');};
+          el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{S.notices=S.notices.filter(x=>x.id!==b.dataset.id); save(); V.render_Notice_Board(el);});
+        }else{
+          const relevant = (S.notices||[]).filter(n=> n.site==='All' || n.site===worksite).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+          el.innerHTML=`<div class="card"><h3>Notice Board — ${worksite||'All Centres'}</h3>
+            <div class="table"><table><thead><tr><th>When</th><th>Title</th><th>Centre</th><th>Message</th></tr></thead><tbody>
+              ${relevant.map(n=>`<tr><td>${fmtDT(n.createdAt)}</td><td>${n.title}</td><td>${n.site}</td><td>${n.body}</td></tr>`).join('') || `<tr><td colspan="4">No notices yet.</td></tr>`}
+            </tbody></table></div>
+          </div>`;
+        }
+      },
+      render_Settings(el){
+        const s=S.settings;
+        el.innerHTML=`<div class="card"><h3>Settings</h3><form id="set" class="grid g3">
+          <div><label>Organization</label><input id="og" value="${s.org}"></div>
+          <div><label>Break (mins)</label><input id="br" type="number" value="${s.breakMins}"></div>
+          <div><label>Target (mins)</label><input id="tg" type="number" value="${s.targetMins}"></div>
+          <div><label>Half-day (mins)</label><input id="hd" type="number" value="${s.halfDayMins}"></div>
+          <div><label>Workday Start</label><input id="ws" type="time" value="${s.workdayStart}"></div>
+          <div><label>Workday End</label><input id="we" type="time" value="${s.workdayEnd}"></div>
+          <div><label>Pay Start</label><input id="ps" type="date" value="${s.payPeriodStart}"></div>
+          <div><label>Pay End</label><input id="pe" type="date" value="${s.payPeriodEnd}"></div>
+          <div><label>Webhook</label><input id="wh" placeholder="https://…" value="${s.webhook}"></div>
+          <div><label>Holiday Points</label><input id="rp1" type="number" value="${s.rewardPoints.holiday}"></div>
+          <div><label>Overtime /h</label><input id="rp2" type="number" value="${s.rewardPoints.overtimePerHour}"></div>
+          <div><label>Event Default</label><input id="rp3" type="number" value="${s.rewardPoints.eventDefault}"></div>
+          <button class="btn" style="grid-column:1/-1">Save</button>
+        </form></div>`;
+        el.querySelector('#set').onsubmit=(e)=>{e.preventDefault(); s.org=el.querySelector('#og').value; s.breakMins=el.querySelector('#br').valueAsNumber; s.targetMins=el.querySelector('#tg').valueAsNumber; s.halfDayMins=el.querySelector('#hd').valueAsNumber; s.workdayStart=el.querySelector('#ws').value; s.workdayEnd=el.querySelector('#we').value; s.payPeriodStart=el.querySelector('#ps').value; s.payPeriodEnd=el.querySelector('#pe').value; s.webhook=el.querySelector('#wh').value; s.rewardPoints.holiday=el.querySelector('#rp1').valueAsNumber; s.rewardPoints.overtimePerHour=el.querySelector('#rp2').valueAsNumber; s.rewardPoints.eventDefault=el.querySelector('#rp3').valueAsNumber; save(); alert('Saved');};
+      },
+      render_Export(el){
+        el.innerHTML=`<div class="card"><h3>Export</h3><div class="grid g4" style="margin-top:10px">
+          <button class="btn secondary" id="ex1">Staff CSV</button>
+          <button class="btn secondary" id="ex2">Sessions CSV</button>
+          <button class="btn secondary" id="ex3">Leaves CSV</button>
+          <button class="btn secondary" id="ex4">Shifts CSV</button>
+          <button class="btn secondary" id="ex5">Login Locations CSV</button>
+          <button class="btn secondary" id="ex7">Notices CSV</button>
+          <button class="btn" id="ex6">Full Backup (JSON)</button>
+        </div></div>`;
+        const dl=(rows,name)=>{if(!rows.length) return alert('No data'); const headers=Object.keys(rows[0]); const csv=[headers.join(','),...rows.map(r=>headers.map(h=>JSON.stringify(r[h]??'')).join(','))].join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=name; document.body.appendChild(a); a.click(); a.remove();};
+        el.querySelector('#ex1').onclick=()=>dl(S.staff,'mls_staff.csv'); el.querySelector('#ex2').onclick=()=>dl(S.sessions,'mls_sessions.csv'); el.querySelector('#ex3').onclick=()=>dl(S.leaves,'mls_leaves.csv'); el.querySelector('#ex4').onclick=()=>dl(S.shifts,'mls_shifts.csv'); el.querySelector('#ex5').onclick=()=>dl(S.logins,'mls_login_locations.csv'); el.querySelector('#ex7').onclick=()=>dl(S.notices,'mls_notices.csv');
+        el.querySelector('#ex6').onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'})); a.download='mls_backup_'+today()+'.json'; document.body.appendChild(a); a.click(); a.remove();};
+      },
+      render_Payroll(el){
+        el.innerHTML=`<div class="card"><h3>Payroll Summary</h3><form id="pf" class="grid g3" style="align-items:end"><div><label>Start</label><input id="p1" type="date" value="${S.settings.payPeriodStart}"></div><div><label>End</label><input id="p2" type="date" value="${S.settings.payPeriodEnd}"></div><button class="btn">Download CSV</button></form><p class="note">Includes worked minutes (hh:mm) and overtime minutes.</p></div>`;
+        el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); const a=el.querySelector('#p1').value,b=el.querySelector('#p2').value; const rows=[]; S.staff.forEach(s=>{const days=[...new Set(S.sessions.filter(x=>x.staffId===s.id && x.date>=a && x.date<=b).map(x=>x.date))]; const w=days.reduce((c,d)=>c+workedMinutes(s.id,d),0); const target=days.reduce((c,d)=>c+(isHoliday(d)?0:S.settings.targetMins),0); const ot=Math.max(0,w-target); rows.push({staffId:s.id,name:s.name,worked_minutes:w,worked_hhmm:hhmm(w),overtime_minutes:ot});}); if(!rows.length) return alert('No data'); const headers=Object.keys(rows[0]); const csv=[headers.join(','),...rows.map(r=>headers.map(h=>JSON.stringify(r[h])).join(','))].join('\n'); const ael=document.createElement('a'); ael.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); ael.download='payroll_'+a+'_to_'+b+'.csv'; document.body.appendChild(ael); ael.click(); ael.remove(); };
+      },
+      // Staff
+      render_My_Dashboard(el){
+        const sid=user.id, som=new Date(new Date().getFullYear(), new Date().getMonth(),1).toISOString().split('T')[0];
+        const days=[...new Set(S.sessions.filter(s=>s.staffId===sid && s.date>=som).map(s=>s.date))];
+        const worked=days.reduce((a,d)=>a+workedMinutes(sid,d),0);
+        const ot=days.reduce((a,d)=>a+lateEarlyOT(sid,d).ot,0);
+        const points=S.profiles[sid]?.performance?.points||0;
+        el.innerHTML=`<div class="card"><h3>This Month</h3><div class="grid g3"><div><div class="note">Worked Hours</div><div style="font-size:1.6rem;font-weight:800;color:var(--green)">${hhmm(worked)}</div></div><div><div class="note">Overtime</div><div style="font-size:1.6rem;font-weight:800;color:var(--blue)">${hhmm(ot)}</div></div><div><div class="note">Points</div><div style="font-size:1.6rem;font-weight:800">${points}</div></div></div></div>
+        <div class="card"><h3>Record Attendance</h3><p class="note">Today: ${fmt(today())} • Site: ${worksite||'-'}</p><div class="dock"><button id="cin" class="btn">Clock In</button><button id="bs" class="btn secondary">Break Start</button><button id="be" class="btn secondary">Break End</button><button id="co" class="btn danger">Clock Out</button></div></div>
+        <div class="card"><h3>Recent Sessions</h3><div class="table"><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Worked</th><th>Location</th></tr></thead><tbody>${S.sessions.filter(s=>s.staffId===sid).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(s=>`<tr><td>${fmt(s.date)}</td><td>${s.clockIn}</td><td>${s.clockOut}</td><td>${hhmm(workedMinutes(sid,s.date))}</td><td>${s.location||'-'}</td></tr>`).join('')}</tbody></table></div></div>`;
+        el.querySelector('#cin').onclick=clockIn; el.querySelector('#bs').onclick=startBreak; el.querySelector('#be').onclick=endBreak; el.querySelector('#co').onclick=clockOut;
+      },
+      render_My_Leaves(el){
+        const my=[...S.leaves].filter(l=>l.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Request Leave</h3><form id="sl"><div><label>Date</label><input type="date" id="sd" value="${today()}"></div><div><label>Type</label><select id="st"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div><div id="smins" class="hidden"><label>Minutes (Short)</label><input type="number" id="sm" placeholder="60"></div><div><label>Reason</label><textarea id="sr" rows="2"></textarea></div><button class="btn">Submit</button></form></div><div class="card"><h3>My Leave History</h3><div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>${my.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
+        const t=el.querySelector('#st'), w=el.querySelector('#smins'); t.onchange=()=>w.classList.toggle('hidden', t.value!=='Short');
+        el.querySelector('#sl').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:user.id,type:t.value,date:el.querySelector('#sd').value,minutes:el.querySelector('#sm').valueAsNumber||0,reason:el.querySelector('#sr').value,status:'Pending',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_My_Leaves(el); alert('Submitted.');};
+      },
+      render_My_Requests(el){
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>New Request</h3><form id="rq"><div><label>Type</label><select id="rt"><option value="message">Message</option><option value="equipment">Equipment</option><option value="salary">Salary Request</option></select></div><div><label>Subject</label><input id="rs" required></div><div id="ramtWrap" class="hidden"><label>Amount (LKR)</label><input id="ramt" type="number" min="0" step="1"></div><div><label>Message</label><textarea id="rb" rows="3" required></textarea></div><button class="btn">Send</button></form></div><div class="card"><h3>My Requests</h3><div class="table"><table><thead><tr><th>When</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${S.inbox.filter(i=>i.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(i=>`<tr><td>${fmtDT(i.createdAt)}</td><td>${i.subject}</td><td>${i.type}${i.type==='salary'&&i.amount? ' — '+i.amount.toLocaleString('en-LK',{style:'currency',currency:'LKR'}):''}</td><td><span class="chip ${i.status}">${i.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
+        const type=el.querySelector('#rt'), amtW=el.querySelector('#ramtWrap'); type.onchange=()=>amtW.classList.toggle('hidden', type.value!=='salary');
+        el.querySelector('#rq').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),staffId:user.id,type:type.value,subject:el.querySelector('#rs').value.trim(),body:el.querySelector('#rb').value.trim(),status:'Pending',createdAt:new Date().toISOString(),replies:[]}; if(type.value==='salary'){o.amount=Number(el.querySelector('#ramt').value)||0;} if(!o.subject||!o.body) return alert('Fill subject and message'); S.inbox.unshift(o); save(); V.render_My_Requests(el); alert('Request sent.');};
+      },
+      render_My_Profile(el){
+        const p=S.profiles[user.id] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
+        el.innerHTML=`<div class="card"><h3>My Profile</h3><form id="pf" class="grid g2"><div><label>Full Name</label><input id="pf1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="pf2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="pf3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="pf4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="pf5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="pf6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="pf7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="pf8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div>
+        <div class="card"><h3>My Documents</h3><input id="up" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No files yet.</td></tr>`}</tbody></table></div></div>
+        <div class="card"><h3>My Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`;
+        el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=el.querySelector('#pf1').value; p.info.email=el.querySelector('#pf2').value; p.info.phone=el.querySelector('#pf3').value; p.info.address=el.querySelector('#pf4').value; p.info.idNo=el.querySelector('#pf5').value; p.info.dob=el.querySelector('#pf6').value; p.info.qualifications=el.querySelector('#pf7').value; p.info.remarks=el.querySelector('#pf8').value; save(); alert('Saved');};
+        el.querySelector('#up').onchange=async(e)=>{const files=[...e.target.files]; for(const f of files){const b=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); p.attachments.unshift({id:id(),name:f.name,size:f.size,type:f.type,added:new Date().toISOString(),data:b});} save(); V.render_My_Profile(el);};
+      },
+      render_Company_Holidays(el){ el.innerHTML=`<div class="card"><h3>Upcoming Holidays</h3><div class="table"><table><thead><tr><th>Date</th><th>Holiday</th></tr></thead><tbody>${S.holidays.filter(h=>new Date(h.date)>=new Date()).sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmt(h.date)}</td><td>${h.title}</td></tr>`).join('')||`<tr><td colspan="2">No upcoming holidays.</td></tr>`}</tbody></table></div></div>`; }
+    };
+
+    function openThread(id){
+      const it=S.inbox.find(i=>i.id===id); if(!it) return;
+      const salary = it.type==='salary' && it.amount ? `<p><b>Requested Amount:</b> LKR ${Number(it.amount).toLocaleString('en-LK')}</p>`:'';
+      const bubbles=(it.replies||[]).map(r=>`<div style="margin:8px 0"><div class="chip ${r.from==='admin'?'Approved':'Pending'}">${r.from}</div><div>${r.body}</div><div class="note">${fmtDT(r.date)}</div></div>`).join('');
+      openDrawer('Conversation', `<div class="card"><h3>${it.subject} <span class="chip ${it.status}" style="margin-left:8px">${it.status}</span></h3><p class="note">From: ${staffName(it.staffId)} • ${fmtDT(it.createdAt)}</p>${salary}<div>${bubbles||'<p class="note">No replies yet.</p>'}</div><form id="rep" style="margin-top:10px"><label>Reply</label><textarea id="rbody" rows="3"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" type="submit">Send</button><button type="button" class="btn secondary st" data-s="Approved">Approve</button><button type="button" class="btn secondary st" data-s="Pending">Pend</button><button type="button" class="btn danger st" data-s="Rejected">Reject</button></div></form></div>`);
+      document.getElementById('rep').onsubmit=(e)=>{e.preventDefault(); const txt=document.getElementById('rbody').value.trim(); if(!txt) return; it.replies ||= []; it.replies.push({from:'admin',body:txt,date:new Date().toISOString()}); save(); openThread(id);};
+      document.querySelectorAll('.st').forEach(b=>b.onclick=()=>{it.status=b.dataset.s; save(); openThread(id);});
+    }
+
+    function openProfile(sid){
+      const p=S.profiles[sid] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
+      const docs=(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No documents.</td></tr>`;
+      openDrawer('Profile — '+staffName(sid), `<div class="card"><h3>Staff Details</h3><form id="pe" class="grid g2"><div><label>Full Name</label><input id="p1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="p2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="p3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="p4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="p5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="p6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="p7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="p8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div><div class="card"><h3>Documents</h3><input id="up2" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${docs}</tbody></table></div></div><div class="card"><h3>Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`);
+      document.getElementById('pe').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=document.getElementById('p1').value; p.info.email=document.getElementById('p2').value; p.info.phone=document.getElementById('p3').value; p.info.address=document.getElementById('p4').value; p.info.idNo=document.getElementById('p5').value; p.info.dob=document.getElementById('p6').value; p.info.qualifications=document.getElementById('p7').value; p.info.remarks=document.getElementById('p8').value; save(); alert('Profile saved.');};
+      document.getElementById('up2').onchange=async(e)=>{const files=[...e.target.files]; for(const f of files){const b=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); p.attachments.unshift({id:id(),name:f.name,size:f.size,type:f.type,added:new Date().toISOString(),data:b});} save(); openProfile(sid);};
+    }
+
+    // Init
+    load();
+    const pref=localStorage.getItem('mls_theme')||'light'; document.body.className=pref; DOM.theme.checked = pref==='dark';
+  })();
+  </script>
+</body>
+</html>
