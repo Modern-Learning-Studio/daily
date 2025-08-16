@@ -65,10 +65,10 @@
     <div class="login-box card">
       <h2 class="brand">MLS <b>DAILY</b></h2>
       <p class="note">Enter your PIN and select your location.</p>
-      <form id="login-form" autocomplete="off">
+      <form id="login-form" autocomplete="off" novalidate>
         <div>
           <label for="pin">PIN</label>
-          <input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4 digits" required />
+          <input id="pin" type="password" inputmode="numeric" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4–6 digits" required />
         </div>
         <div>
           <label for="site">Worksite</label>
@@ -119,7 +119,7 @@
   <script>
   (function(){
     'use strict';
-    const KEY='mls_daily_state_v1';
+    const KEY='mls_daily_state_v2';
     const LOCS=['MLS - Colombo 4','Finnish Preschool - Park Road','Forest School - Piliyandala','SenSoMo - One Galle Face','Forest School - Cape Weligama'];
     const DOM={
       app:document.getElementById('app'), login:document.getElementById('login'),
@@ -145,21 +145,7 @@
     const fmt=d=>new Date(d).toLocaleDateString('en-CA'); const fmtDT=d=>new Date(d).toLocaleString();
 
     // State
-    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}
-// Auto-bootstrap from webhook on fresh devices
-(async function initialCloudBootstrap(){
-  try{
-    if((S.staff||[]).length<=3 && S.settings && S.settings.webhook){
-      const r = await fetch(S.settings.webhook,{method:'GET'});
-      if(r.ok){
-        const data = await r.json();
-        if(data && typeof data==='object' && Array.isArray(data.staff) && data.staff.length>(S.staff||[]).length){
-          S = data; save();
-        }
-      }
-    }
-  }catch(e){/* ignore */}
-})();catch{seed();}}
+    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}catch{seed();}}
     function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){alert('Storage error: '+e.message);}}
     function seed(){
       S={ settings:{org:'MLS Innovations',breakMins:30,targetMins:480,halfDayMins:240,workdayStart:'09:00',workdayEnd:'17:30',payPeriodStart:'2025-08-01',payPeriodEnd:'2025-08-31',webhook:'',rewardPoints:{holiday:5,overtimePerHour:1,eventDefault:10}},
@@ -222,66 +208,49 @@
     const openDrawer=(title,html)=>{DOM.dtitle.textContent=title; DOM.dbody.innerHTML=html; DOM.overlay.classList.add('show'); DOM.drawer.classList.add('show');};
     const closeDrawer=()=>{DOM.overlay.classList.remove('show'); DOM.drawer.classList.remove('show');};
 
-    // LOGIN
-    DOM.frm.addEventListener('submit', async ev=>{
-  ev.preventDefault(); DOM.err.textContent='';
-  const pin = String(DOM.pin.value||'').replace(/\D/g,'').slice(0,6);
-  const site = DOM.site.value;
-  if(!pin){DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return;}
-  if(!site){DOM.err.textContent='Select your worksite.'; DOM.site.focus(); return;}
-
-  function tryMatch(){
-    if(pin==='0000'){ return {id:'admin',name:'Admin',role:'Admin'}; }
-    const m = S.staff.find(s=> String(s.pin).trim()===pin && s.active);
-    return m ? {id:m.id,name:m.name,role:'Staff'} : null;
-  }
-  let candidate = tryMatch();
-
-  // Fallback: pull latest org from webhook and retry once
-  if(!candidate && S.settings && S.settings.webhook){
-    try{
-      const r = await fetch(S.settings.webhook, {method:'GET'});
-      if(r.ok){
-        const data = await r.json();
-        if(data && typeof data==='object'){
-          S = data; save();
-          candidate = tryMatch();
-        }
+    // LOGIN (custom validation; no native pattern)
+    DOM.frm.addEventListener('submit', async (ev)=>{
+      ev.preventDefault(); DOM.err.textContent='';
+      const raw = (DOM.pin.value||'').toString().normalize('NFKC');
+      const pin = raw.replace(/\\D/g,'').slice(0,6);
+      const site = DOM.site.value;
+      if(pin.length < 4){DOM.err.textContent='PIN must be 4–6 digits.'; DOM.pin.focus(); return;}
+      if(!site){
+        const st = (S.staff||[]).find(s=>String(s.pin||'').trim()===pin);
+        if(st && st.defaultWorksite){ DOM.site.value = st.defaultWorksite; }
       }
-    }catch(e){ /* ignore network errors */ }
-  }
 
-  if(!candidate){
-    DOM.err.textContent='Invalid PIN or inactive account. Ask Admin to Sync to cloud, then try again.';
-    return;
-  }
 
-  user = candidate;
-  worksite = site;
+      function tryMatch(){
+        if(pin==='0000'){ return {id:'admin',name:'Admin',role:'Admin'}; }
+        const m = (S.staff||[]).find(s=> String(s.pin||'').trim()===pin && s.active);
+        return m ? {id:m.id,name:m.name,role:'Staff'} : null;
+      }
+      let candidate = tryMatch();
 
-  const record=(coords)=>{
-    S.logins.unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
-    save();
-  };
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(
-      p=>{record(p.coords);},
-      _=>{record();},
-      {enableHighAccuracy:true,timeout:8000,maximumAge:0}
-    );
-  } else record();
-  DOM.login.style.display='none'; DOM.app.style.display='block';
-  renderHeader(); renderTabs(); show(TABS[user.role][0]);
-  DOM.pin.value='';
-});
+      // Fallback: fetch from webhook and retry once
+      if(!candidate && S.settings && S.settings.webhook){
+        try{
+          const r = await fetch(S.settings.webhook,{method:'GET'});
+          if(r.ok){
+            const data = await r.json();
+            if(data && typeof data==='object'){
+              S=data; save();
+              candidate = tryMatch();
+            }
+          }
+        }catch(e){ /* ignore */ }
+      }
+
+      if(!candidate){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
+
+      user = candidate; worksite = site;
+      const record=(coords)=>{
+        (S.logins ||= []).unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
         save();
       };
       if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(
-          p=>{record(p.coords);},
-          _=>{record();},
-          {enableHighAccuracy:true,timeout:8000,maximumAge:0}
-        );
+        navigator.geolocation.getCurrentPosition(p=>record(p.coords), _=>record(), {enableHighAccuracy:true,timeout:8000,maximumAge:0});
       } else record();
       DOM.login.style.display='none'; DOM.app.style.display='block';
       renderHeader(); renderTabs(); show(TABS[user.role][0]);
@@ -302,17 +271,54 @@
       [...DOM.tabs.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
     }
 
-    function show(name){
-      [...document.querySelectorAll('.btn.tab')].forEach(b=>b.classList.toggle('active', b.dataset.v===name));
-      const id = 'v-'+name.replace(/\s+/g,'');
-      let el = document.getElementById(id);
-      if(!el){ el=document.createElement('section'); el.id=id; el.className='view'; DOM.main.appendChild(el); }
-      [...document.querySelectorAll('.view')].forEach(v=>v.classList.remove('active')); el.classList.add('active');
-      const fn = 'render_'+name.replace(/\s+/g,'_').replace(/[^A-Za-z_]/g,'');
-      if(V[fn]) V[fn](el); else el.innerHTML='<div class="card"><h3>'+name+'</h3><p>Loading…</p></div>';
-    }
+    
+function show(name){
+  // Activate tab button
+  [...document.querySelectorAll('.btn.tab')].forEach(b=>b.classList.toggle('active', b.dataset.v===name));
 
-    // actions
+  // Ensure view container
+  const id = 'v-'+name.replace(/\s+/g,'');
+  let el = document.getElementById(id);
+  if(!el){ el=document.createElement('section'); el.id=id; el.className='view'; DOM.main.appendChild(el); }
+
+  // Swap visibility
+  [...document.querySelectorAll('.view')].forEach(v=>v.classList.remove('active'));
+  el.classList.add('active');
+
+  // Global actions (safe to (re)bind each time)
+  DOM.logout.onclick=()=>{user=null; worksite=null; DOM.app.style.display='none'; DOM.login.style.display='flex';};
+  DOM.dclose.onclick=closeDrawer; DOM.overlay.onclick=closeDrawer;
+  DOM.sync.onclick=async()=>{
+    const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
+    if(!confirm('Send all current data to the webhook?')) return;
+    try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)}); if(!r.ok) throw new Error(r.status+' '+r.statusText); alert('Sync successful');}
+    catch(e){alert('Sync failed: '+e.message);}
+  };
+  DOM.loadCloud.onclick=async()=>{
+    const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
+    try{const r=await fetch(url,{method:'GET'}); if(!r.ok) throw new Error(r.status+' '+r.statusText); const data = await r.json(); if(!data || typeof data!=='object') throw new Error('Invalid data'); S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]); }catch(e){alert('Load failed: '+e.message);}
+  };
+  DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
+
+  // Resolve and render view
+  const candidates = [
+    'render_'+name.replace(/\s+/g,'_').replace(/[^A-Za-z_]/g,''), // "Shift Planner" -> render_Shift_Planner
+    'render_'+name.replace(/\s+/g,'').replace(/[^A-Za-z_]/g,''),  // "Shift Planner" -> render_ShiftPlanner
+  ];
+  for(const fn of candidates){
+    if(V[fn]){
+      try{ V[fn](el); return; }
+      catch(err){
+        console.error('Render error in', fn, err);
+        el.innerHTML = '<div class="card"><h3>'+name+'</h3><p style="color:var(--red)">Render error: '+(err && (err.message||err))+'</p></div>';
+        return;
+      }
+    }
+  }
+  el.innerHTML = '<div class="card"><h3>'+name+'</h3><p>Feature not available.</p></div>';
+}
+  // Swap visibility
+      // actions
     DOM.logout.onclick=()=>{user=null; worksite=null; DOM.app.style.display='none'; DOM.login.style.display='flex';};
     DOM.dclose.onclick=closeDrawer; DOM.overlay.onclick=closeDrawer;
     DOM.sync.onclick=async()=>{
@@ -323,13 +329,7 @@
     };
     DOM.loadCloud.onclick=async()=>{
       const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
-      try{
-        const r=await fetch(url,{method:'GET'});
-        if(!r.ok) throw new Error(r.status+' '+r.statusText);
-        const data = await r.json();
-        if(!data || typeof data!=='object') throw new Error('Invalid data');
-        S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]);
-      }catch(e){alert('Load failed: '+e.message);}
+      try{const r=await fetch(url,{method:'GET'}); if(!r.ok) throw new Error(r.status+' '+r.statusText); const data = await r.json(); if(!data || typeof data!=='object') throw new Error('Invalid data'); S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]); }catch(e){alert('Load failed: '+e.message);}
     };
     DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
 
@@ -342,7 +342,7 @@
       S.sessions.push({id:id(),staffId:user.id,date:L.date,clockIn:L.clockIn,clockOut:now(),breaks:L.breaks||[],location:L.location||worksite});
       delete S.live[user.id]; autoRewardOnFinalize(user.id, today()); save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); alert('Clocked out.'); }
 
-    // Views
+    // Views (same feature set as previous final)
     const V={
       render_Today(el){
         const d=today();
@@ -414,7 +414,7 @@
           <div class="grid g2">
             <div class="card">
               <h3>Submit Leave for Staff</h3>
-              <form id="admin-leave-form">
+              <form id="admin-leave-form" novalidate>
                 <div><label for="leave-staff">Staff</label><select id="leave-staff">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
                 <div><label for="leave-date">Date</label><input type="date" id="leave-date" value="${today()}"></div>
                 <div><label for="leave-type">Type</label><select id="leave-type"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div>
@@ -435,7 +435,7 @@
       },
       render_Holidays(el){
         el.innerHTML=`<div class="card"><h3>Company Holidays</h3>
-          <form id="hf" class="grid g2"><div><label>Date</label><input type="date" id="hd"></div><div><label>Title</label><input id="ht"></div><button class="btn">Add</button></form>
+          <form id="hf" class="grid g2" novalidate><div><label>Date</label><input type="date" id="hd"></div><div><label>Title</label><input id="ht"></div><button class="btn">Add</button></form>
           <div class="table" style="margin-top:10px"><table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>${S.holidays.sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmt(h.date)}</td><td>${h.title}</td></tr>`).join('') || `<tr><td colspan="2">None.</td></tr>`}</tbody></table></div></div>`;
         el.querySelector('#hf').onsubmit=(e)=>{e.preventDefault(); const d=el.querySelector('#hd').value,t=el.querySelector('#ht').value.trim(); if(!d||!t) return alert('Fill both'); S.holidays.push({date:d,title:t}); save(); V.render_Holidays(el);};
       },
@@ -446,29 +446,30 @@
       },
       render_Staff(el){
         el.innerHTML=`<div class="grid g2">
-          <div class="card"><h3>Add Staff</h3><form id="sf"><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" pattern="[0-9]{4}" maxlength="4" required></div><button class="btn">Add</button></form></div>
+          <div class="card"><h3>Add Staff</h3><form id="sf" novalidate><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" inputmode="numeric" maxlength="4" required></div><button class="btn">Add</button></form></div>
           <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
         </div>`;
         el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault();
-  const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String(el.querySelector('#spin').value.trim()),active:true};
-  if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all');
-  if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists');
-  S.staff.push(ns); save(); V.render_Staff(el);
-  if(S.settings && S.settings.webhook){
-    setTimeout(()=>{ if(confirm('Staff added. Sync to cloud so they can log in from other devices?')) DOM.sync.click(); }, 0);
-  }
-};
+          const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String((el.querySelector('#spin').value||'').replace(/\\D/g,'')),active:true};
+          if(ns.pin.length!==4) return alert('PIN must be exactly 4 digits.');
+          if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all');
+          if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists');
+          S.staff.push(ns); save(); V.render_Staff(el);
+          if(S.settings && S.settings.webhook){
+            setTimeout(()=>{ if(confirm('Staff added. Sync to cloud so they can log in from other devices?')) DOM.sync.click(); }, 0);
+          }
+        };
         el.querySelectorAll('.sa').forEach(b=>b.onclick=()=>{const s=S.staff.find(x=>x.id===b.dataset.id); if(!s) return; if(b.dataset.a==='remove'){if(!confirm('Remove staff?')) return; S.staff=S.staff.filter(x=>x.id!==s.id);} else s.active = !s.active; save(); V.render_Staff(el);});
         el.querySelectorAll('.pview').forEach(b=>b.onclick=()=>openProfile(b.dataset.id));
       },
       render_Rewards(el){
         const board=[...S.staff].map(s=>({name:s.name,pts:S.profiles[s.id]?.performance?.points||0})).sort((a,b)=>b.pts-a.pts);
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Award Points</h3><form id="rw"><div><label>Staff</label><select id="rwS">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Points</label><input id="rwP" type="number" value="${S.settings.rewardPoints.eventDefault}"></div><div><label>Reason</label><input id="rwR" placeholder="Event participation"></div><button class="btn">Give</button></form></div><div class="card"><h3>Leaderboard</h3><div class="table"><table><thead><tr><th>Staff</th><th>Points</th></tr></thead><tbody>${board.map(x=>`<tr><td>${x.name}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Award Points</h3><form id="rw" novalidate><div><label>Staff</label><select id="rwS">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Points</label><input id="rwP" type="number" value="${S.settings.rewardPoints.eventDefault}"></div><div><label>Reason</label><input id="rwR" placeholder="Event participation"></div><button class="btn">Give</button></form></div><div class="card"><h3>Leaderboard</h3><div class="table"><table><thead><tr><th>Staff</th><th>Points</th></tr></thead><tbody>${board.map(x=>`<tr><td>${x.name}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div></div></div>`;
         el.querySelector('#rw').onsubmit=(e)=>{e.preventDefault(); const sid=el.querySelector('#rwS').value, pts=Number(el.querySelector('#rwP').value)||0, reason=el.querySelector('#rwR').value||'Event participation'; awardPoints(sid,pts,reason); alert('Points awarded.'); V.render_Rewards(el);};
       },
       render_Shift_Planner(el){
         const rows=[...S.shifts].sort((a,b)=>a.date.localeCompare(b.date)||staffName(a.staffId).localeCompare(staffName(b.staffId)));
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Add Shift</h3><form id="shf"><div class="grid g2"><div><label>Date</label><input type="date" id="shd" value="${today()}"></div><div><label>Location</label><select id="shl">${LOCS.map(x=>`<option>${x}</option>`).join('')}</select></div><div><label>Staff</label><select id="shs">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Start</label><input type="time" id="shst" value="09:00"></div><div><label>End</label><input type="time" id="shen" value="17:30"></div></div><div><label>Notes</label><input id="shn"></div><button class="btn">Add</button></form></div><div class="card"><h3>Shifts</h3><div class="table"><table><thead><tr><th>Date</th><th>Location</th><th>Staff</th><th>Start</th><th>End</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.location}</td><td>${staffName(r.staffId)}</td><td>${r.start}</td><td>${r.end}</td><td>${r.notes||''}</td><td><button class="btn danger del" data-id="${r.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="7">No shifts yet.</td></tr>`}</tbody></table></div></div></div>`;
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Add Shift</h3><form id="shf" novalidate><div class="grid g2"><div><label>Date</label><input type="date" id="shd" value="${today()}"></div><div><label>Location</label><select id="shl">${LOCS.map(x=>`<option>${x}</option>`).join('')}</select></div><div><label>Staff</label><select id="shs">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Start</label><input type="time" id="shst" value="09:00"></div><div><label>End</label><input type="time" id="shen" value="17:30"></div></div><div><label>Notes</label><input id="shn"></div><button class="btn">Add</button></form></div><div class="card"><h3>Shifts</h3><div class="table"><table><thead><tr><th>Date</th><th>Location</th><th>Staff</th><th>Start</th><th>End</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.location}</td><td>${staffName(r.staffId)}</td><td>${r.start}</td><td>${r.end}</td><td>${r.notes||''}</td><td><button class="btn danger del" data-id="${r.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="7">No shifts yet.</td></tr>`}</tbody></table></div></div></div>`;
         el.querySelector('#shf').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),date:el.querySelector('#shd').value,location:el.querySelector('#shl').value,staffId:el.querySelector('#shs').value,start:el.querySelector('#shst').value,end:el.querySelector('#shen').value,notes:el.querySelector('#shn').value}; if(!o.date||!o.location||!o.staffId||!o.start||!o.end) return alert('Fill all'); S.shifts.push(o); save(); V.render_Shift_Planner(el);};
         el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{S.shifts=S.shifts.filter(x=>x.id!==b.dataset.id); save(); V.render_Shift_Planner(el);});
       },
@@ -478,7 +479,7 @@
           el.innerHTML=`<div class="grid g2">
             <div class="card">
               <h3>Post a Notice</h3>
-              <form id="nb">
+              <form id="nb" novalidate>
                 <div><label>Audience (Centre)</label>
                   <select id="nbSite">
                     <option>All</option>
@@ -510,7 +511,7 @@
       },
       render_Settings(el){
         const s=S.settings;
-        el.innerHTML=`<div class="card"><h3>Settings</h3><form id="set" class="grid g3">
+        el.innerHTML=`<div class="card"><h3>Settings</h3><form id="set" class="grid g3" novalidate>
           <div><label>Organization</label><input id="og" value="${s.org}"></div>
           <div><label>Break (mins)</label><input id="br" type="number" value="${s.breakMins}"></div>
           <div><label>Target (mins)</label><input id="tg" type="number" value="${s.targetMins}"></div>
@@ -542,7 +543,7 @@
         el.querySelector('#ex6').onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'})); a.download='mls_backup_'+today()+'.json'; document.body.appendChild(a); a.click(); a.remove();};
       },
       render_Payroll(el){
-        el.innerHTML=`<div class="card"><h3>Payroll Summary</h3><form id="pf" class="grid g3" style="align-items:end"><div><label>Start</label><input id="p1" type="date" value="${S.settings.payPeriodStart}"></div><div><label>End</label><input id="p2" type="date" value="${S.settings.payPeriodEnd}"></div><button class="btn">Download CSV</button></form><p class="note">Includes worked minutes (hh:mm) and overtime minutes.</p></div>`;
+        el.innerHTML=`<div class="card"><h3>Payroll Summary</h3><form id="pf" class="grid g3" style="align-items:end" novalidate><div><label>Start</label><input id="p1" type="date" value="${S.settings.payPeriodStart}"></div><div><label>End</label><input id="p2" type="date" value="${S.settings.payPeriodEnd}"></div><button class="btn">Download CSV</button></form><p class="note">Includes worked minutes (hh:mm) and overtime minutes.</p></div>`;
         el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); const a=el.querySelector('#p1').value,b=el.querySelector('#p2').value; const rows=[]; S.staff.forEach(s=>{const days=[...new Set(S.sessions.filter(x=>x.staffId===s.id && x.date>=a && x.date<=b).map(x=>x.date))]; const w=days.reduce((c,d)=>c+workedMinutes(s.id,d),0); const target=days.reduce((c,d)=>c+(isHoliday(d)?0:S.settings.targetMins),0); const ot=Math.max(0,w-target); rows.push({staffId:s.id,name:s.name,worked_minutes:w,worked_hhmm:hhmm(w),overtime_minutes:ot});}); if(!rows.length) return alert('No data'); const headers=Object.keys(rows[0]); const csv=[headers.join(','),...rows.map(r=>headers.map(h=>JSON.stringify(r[h])).join(','))].join('\n'); const ael=document.createElement('a'); ael.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); ael.download='payroll_'+a+'_to_'+b+'.csv'; document.body.appendChild(ael); ael.click(); ael.remove(); };
       },
       // Staff
@@ -559,18 +560,18 @@
       },
       render_My_Leaves(el){
         const my=[...S.leaves].filter(l=>l.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Request Leave</h3><form id="sl"><div><label>Date</label><input type="date" id="sd" value="${today()}"></div><div><label>Type</label><select id="st"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div><div id="smins" class="hidden"><label>Minutes (Short)</label><input type="number" id="sm" placeholder="60"></div><div><label>Reason</label><textarea id="sr" rows="2"></textarea></div><button class="btn">Submit</button></form></div><div class="card"><h3>My Leave History</h3><div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>${my.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Request Leave</h3><form id="sl" novalidate><div><label>Date</label><input type="date" id="sd" value="${today()}"></div><div><label>Type</label><select id="st"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div><div id="smins" class="hidden"><label>Minutes (Short)</label><input type="number" id="sm" placeholder="60"></div><div><label>Reason</label><textarea id="sr" rows="2"></textarea></div><button class="btn">Submit</button></form></div><div class="card"><h3>My Leave History</h3><div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>${my.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
         const t=el.querySelector('#st'), w=el.querySelector('#smins'); t.onchange=()=>w.classList.toggle('hidden', t.value!=='Short');
         el.querySelector('#sl').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:user.id,type:t.value,date:el.querySelector('#sd').value,minutes:el.querySelector('#sm').valueAsNumber||0,reason:el.querySelector('#sr').value,status:'Pending',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_My_Leaves(el); alert('Submitted.');};
       },
       render_My_Requests(el){
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>New Request</h3><form id="rq"><div><label>Type</label><select id="rt"><option value="message">Message</option><option value="equipment">Equipment</option><option value="salary">Salary Request</option></select></div><div><label>Subject</label><input id="rs" required></div><div id="ramtWrap" class="hidden"><label>Amount (LKR)</label><input id="ramt" type="number" min="0" step="1"></div><div><label>Message</label><textarea id="rb" rows="3" required></textarea></div><button class="btn">Send</button></form></div><div class="card"><h3>My Requests</h3><div class="table"><table><thead><tr><th>When</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${S.inbox.filter(i=>i.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(i=>`<tr><td>${fmtDT(i.createdAt)}</td><td>${i.subject}</td><td>${i.type}${i.type==='salary'&&i.amount? ' — '+i.amount.toLocaleString('en-LK',{style:'currency',currency:'LKR'}):''}</td><td><span class="chip ${i.status}">${i.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
+        el.innerHTML=`<div class="grid g2"><div class="card"><h3>New Request</h3><form id="rq" novalidate><div><label>Type</label><select id="rt"><option value="message">Message</option><option value="equipment">Equipment</option><option value="salary">Salary Request</option></select></div><div><label>Subject</label><input id="rs" required></div><div id="ramtWrap" class="hidden"><label>Amount (LKR)</label><input id="ramt" type="number" min="0" step="1"></div><div><label>Message</label><textarea id="rb" rows="3" required></textarea></div><button class="btn">Send</button></form></div><div class="card"><h3>My Requests</h3><div class="table"><table><thead><tr><th>When</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${S.inbox.filter(i=>i.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(i=>`<tr><td>${fmtDT(i.createdAt)}</td><td>${i.subject}</td><td>${i.type}${i.type==='salary'&&i.amount? ' — '+i.amount.toLocaleString('en-LK',{style:'currency',currency:'LKR'}):''}</td><td><span class="chip ${i.status}">${i.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
         const type=el.querySelector('#rt'), amtW=el.querySelector('#ramtWrap'); type.onchange=()=>amtW.classList.toggle('hidden', type.value!=='salary');
         el.querySelector('#rq').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),staffId:user.id,type:type.value,subject:el.querySelector('#rs').value.trim(),body:el.querySelector('#rb').value.trim(),status:'Pending',createdAt:new Date().toISOString(),replies:[]}; if(type.value==='salary'){o.amount=Number(el.querySelector('#ramt').value)||0;} if(!o.subject||!o.body) return alert('Fill subject and message'); S.inbox.unshift(o); save(); V.render_My_Requests(el); alert('Request sent.');};
       },
       render_My_Profile(el){
         const p=S.profiles[user.id] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
-        el.innerHTML=`<div class="card"><h3>My Profile</h3><form id="pf" class="grid g2"><div><label>Full Name</label><input id="pf1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="pf2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="pf3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="pf4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="pf5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="pf6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="pf7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="pf8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div>
+        el.innerHTML=`<div class="card"><h3>My Profile</h3><form id="pf" class="grid g2" novalidate><div><label>Full Name</label><input id="pf1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="pf2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="pf3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="pf4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="pf5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="pf6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="pf7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="pf8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div>
         <div class="card"><h3>My Documents</h3><input id="up" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No files yet.</td></tr>`}</tbody></table></div></div>
         <div class="card"><h3>My Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`;
         el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=el.querySelector('#pf1').value; p.info.email=el.querySelector('#pf2').value; p.info.phone=el.querySelector('#pf3').value; p.info.address=el.querySelector('#pf4').value; p.info.idNo=el.querySelector('#pf5').value; p.info.dob=el.querySelector('#pf6').value; p.info.qualifications=el.querySelector('#pf7').value; p.info.remarks=el.querySelector('#pf8').value; save(); alert('Saved');};
@@ -591,13 +592,27 @@
     function openProfile(sid){
       const p=S.profiles[sid] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
       const docs=(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No documents.</td></tr>`;
-      openDrawer('Profile — '+staffName(sid), `<div class="card"><h3>Staff Details</h3><form id="pe" class="grid g2"><div><label>Full Name</label><input id="p1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="p2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="p3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="p4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="p5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="p6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="p7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="p8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div><div class="card"><h3>Documents</h3><input id="up2" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${docs}</tbody></table></div></div><div class="card"><h3>Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`);
+      openDrawer('Profile — '+staffName(sid), `<div class="card"><h3>Staff Details</h3><form id="pe" class="grid g2" novalidate><div><label>Full Name</label><input id="p1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="p2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="p3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="p4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="p5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="p6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="p7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="p8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div><div class="card"><h3>Documents</h3><input id="up2" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${docs}</tbody></table></div></div><div class="card"><h3>Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`);
       document.getElementById('pe').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=document.getElementById('p1').value; p.info.email=document.getElementById('p2').value; p.info.phone=document.getElementById('p3').value; p.info.address=document.getElementById('p4').value; p.info.idNo=document.getElementById('p5').value; p.info.dob=document.getElementById('p6').value; p.info.qualifications=document.getElementById('p7').value; p.info.remarks=document.getElementById('p8').value; save(); alert('Profile saved.');};
       document.getElementById('up2').onchange=async(e)=>{const files=[...e.target.files]; for(const f of files){const b=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); p.attachments.unshift({id:id(),name:f.name,size:f.size,type:f.type,added:new Date().toISOString(),data:b});} save(); openProfile(sid);};
     }
 
     // Init
     load();
+    // Auto-bootstrap from webhook on fresh devices
+    (async function initialCloudBootstrap(){
+      try{
+        if((S.staff||[]).length<=3 && S.settings && S.settings.webhook){
+          const r = await fetch(S.settings.webhook,{method:'GET'});
+          if(r.ok){
+            const data = await r.json();
+            if(data && typeof data==='object' && Array.isArray(data.staff) && data.staff.length>(S.staff||[]).length){
+              S = data; save();
+            }
+          }
+        }
+      }catch(e){/* ignore */}
+    })();
     const pref=localStorage.getItem('mls_theme')||'light'; document.body.className=pref; DOM.theme.checked = pref==='dark';
   })();
   </script>
