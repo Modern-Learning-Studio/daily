@@ -1,1231 +1,1114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>MLS DAILY</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-:root{
-  --bg:#ffffff;--card:#ffffff;--line:#e5e7eb;--text:#111827;--muted:#6b7280;
-  --accent:#22c55e;--accent-d:#16a34a;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
-  --radius:12px;--shadow:0 6px 24px rgba(0,0,0,.08);
-}
-*{box-sizing:border-box} html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
-.hidden{display:none!important}
-.container{max-width:1200px;margin:0 auto;padding:16px}
-header.sticky{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-header .bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
-.brand{font-weight:800;letter-spacing:.3px}
-.brand .accent{color:var(--accent)}
-.badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:600;background:#f8fafc;color:var(--text)}
-.badge.admin{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a}
-.badge.staff{border-color:#bbf7d0;background:#ecfdf5;color:#065f46}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#ffffff;color:var(--text);cursor:pointer;transition:.15s all}
-.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
-.btn.primary{background:var(--accent);border-color:transparent;color:#052e16}
-.btn.danger{background:var(--red);border-color:transparent;color:white}
-.btn.small{padding:6px 10px;border-radius:8px;font-size:12px}
-.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
-.tabs .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#f9fafb;color:#374151;cursor:pointer}
-.tabs .tab.active{background:var(--accent);color:#052e16;border-color:transparent}
-.grid{display:grid;gap:16px}
-.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-@media (max-width:900px){.grid.cols-3{grid-template-columns:1fr}.grid.cols-2{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-.card .head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
-.card .body{padding:14px 16px}
-.input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#ffffff;color:var(--text)}
-label{display:block;font-weight:600;margin:8px 0 6px}
-.table-wrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-thead th{position:sticky;top:0;background:#f3f4f6;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
-.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.kpi .item{padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;text-align:center}
-.kpi .value{font-size:22px;font-weight:800;color:var(--accent)}
-.kpi .label{color:var(--muted);font-size:12px}
-.chip{padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#f8fafc}
-.chip.ok{background:#ecfdf5;border-color:#86efac;color:#065f46}
-.chip.warn{background:#fffbeb;border-color:#fcd34d;color:#78350f}
-.chip.err{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
-footer{padding:30px 16px;color:var(--muted);text-align:center}
-.view{display:none}
-.view.active{display:block;animation:fade .25s ease}
-@keyframes fade{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
-/* login */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f8fafc}
-.login-card{max-width:420px;width:100%}
-.err{color:#b91c1c;min-height:18px;margin-top:6px}
-.row{display:flex;gap:10px;align-items:center}
-.row > * {flex:1}
-.small{font-size:12px;color:var(--muted)}
-.tag{display:inline-block;margin-right:8px;color:#4b5563}
-/* drawer overlay */
-#overlay{background:rgba(0,0,0,.35)}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MLS DAILY</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#111827;
+      --border:#e5e7eb;
+      --accent:#22c55e;
+      --accent-600:#16a34a;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --blue:#3b82f6;
+      --radius:12px;
+      --shadow:0 6px 18px rgba(0,0,0,.06);
+      --sp:16px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.55;
+      font-size:16px;
+    }
+    .hidden{display:none!important}
+    .wrap{max-width:1100px;margin:0 auto;padding:var(--sp)}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--sp); margin-bottom:var(--sp)}
+    .header{
+      position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--border);
+      box-shadow:0 2px 12px rgba(0,0,0,.04);
+    }
+    .header .inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px var(--sp);}
+    .brand{font-weight:800;letter-spacing:.3px}
+    .brand .accent{color:var(--accent)}
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;color:white}
+    .badge-admin{background:var(--blue)}
+    .badge-staff{background:var(--accent)}
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff; color:#111827;
+      padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;
+      transition:all .18s ease; box-shadow:0 1px 0 rgba(0,0,0,.03);
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .btn.primary:hover{background:var(--accent-600)}
+    .btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .btn.warn{background:var(--warn);color:#111827;border-color:var(--warn)}
+    input,select,textarea{
+      width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);
+    }
+    label{font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;display:block}
+    .row{display:grid;gap:var(--sp)}
+    .row.cols-2{grid-template-columns:repeat(2,1fr)}
+    .row.cols-3{grid-template-columns:repeat(3,1fr)}
+    .row.cols-4{grid-template-columns:repeat(4,1fr)}
+    @media (max-width:900px){.row.cols-4{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:680px){.row.cols-3{grid-template-columns:1fr}.row.cols-2{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#fff;z-index:1}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:10px var(--sp)}
+    .nav .tab{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:#fff;font-weight:700}
+    .nav .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .status{padding:4px 10px;border-radius:999px;font-size:12px;color:#fff;display:inline-block}
+    .Approved{background:var(--accent)}
+    .Pending{background:var(--warn);color:#111827}
+    .Rejected{background:var(--danger)}
+    .subtle{color:var(--muted);font-size:13px}
+    .kpis{display:grid;gap:var(--sp);grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .kpi{padding:14px;border:1px solid var(--border);border-radius:10px;background:#fafafa}
+    .kpi .value{font-size:22px;font-weight:800}
+    .grid{display:grid;gap:var(--sp);grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .tag{font-size:12px;padding:4px 8px;border-radius:999px;background:#f3f4f6;border:1px solid var(--border);display:inline-block}
+    .sticky-footer{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);padding:10px;display:flex;gap:8px;justify-content:flex-end}
+    /* Login */
+    .login{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:var(--sp);}
+    .login .box{max-width:420px;width:100%}
+  </style>
 </head>
 <body>
-<section id="login" class="login-wrap">
-  <div class="card login-card">
-    <div class="head">
+  <header class="header">
+    <div class="inner wrap">
       <div class="brand">MLS <span class="accent">DAILY</span></div>
-      <div class="small">Single-File • Offline-first</div>
-    </div>
-    <div class="body">
-      <form id="login-form" novalidate>
-        <label for="site">Centre</label>
-        <select id="site" class="input" required></select>
-        <label for="pin">PIN</label>
-        <input id="pin" class="input" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="e.g., 1001" maxlength="8" required>
-        <div id="err" class="err"></div>
-        <button class="btn primary" style="width:100%">Login</button>
-      </form>
-      <div class="small" style="margin-top:10px">
-        Tip: Admin <span class="tag">0000</span> • Staff <span class="tag">1001</span> <span class="tag">1002</span>
+      <div class="actions">
+        <span id="user-badge" class="badge hidden"></span>
+        <button id="btn-sync" class="btn">Sync → Webhook</button>
+        <button id="btn-load" class="btn">Load from Webhook</button>
+        <button id="btn-test" class="btn">Test Webhook</button>
+        <button id="btn-logout" class="btn danger hidden">Logout</button>
       </div>
     </div>
-  </div>
-</section>
-
-<section id="app" class="hidden">
-  <header class="sticky">
-    <div class="bar container">
-      <div class="brand">MLS <span class="accent">DAILY</span></div>
-      <div id="who" class="badge">—</div>
-      <div class="row" style="gap:8px;flex:0 0 auto">
-        <button id="test-webhook" class="btn small">Test Webhook</button>
-        <button id="load-cloud" class="btn small">Load from Webhook</button>
-        <button id="sync" class="btn small">Sync → Webhook</button>
-        <button id="logout" class="btn small">Logout</button>
-      </div>
-    </div>
-    <div class="tabs container" id="tabs"></div>
   </header>
-  <main class="container" id="main"></main>
-</section>
 
-<!-- Drawer -->
-<div id="overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50"></div>
-<aside id="drawer" class="hidden" style="position:fixed;right:0;top:0;height:100%;width:420px;max-width:96%;background:var(--card);border-left:1px solid var(--line);z-index:60;box-shadow:var(--shadow)">
-  <div class="head" style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 14px">
-    <b id="drawer-title">Details</b>
-    <button id="drawer-close" class="btn small">Close</button>
-  </div>
-  <div id="drawer-body" style="padding:14px;overflow:auto;height:calc(100% - 54px)"></div>
-</aside>
-
-<script>
-(() => {
-  'use strict';
-
-  // ===== A. DOM & UTILS =====
-  const DOM = {
-    login: document.getElementById('login'),
-    app: document.getElementById('app'),
-    tabs: document.getElementById('tabs'),
-    main: document.getElementById('main'),
-    who: document.getElementById('who'),
-    site: document.getElementById('site'),
-    pin: document.getElementById('pin'),
-    err: document.getElementById('err'),
-    frm: document.getElementById('login-form'),
-    logout: document.getElementById('logout'),
-    sync: document.getElementById('sync'),
-    testWebhook: document.getElementById('test-webhook'),
-    loadCloud: document.getElementById('load-cloud'),
-    overlay: document.getElementById('overlay'),
-    drawer: document.getElementById('drawer'),
-    dtitle: document.getElementById('drawer-title'),
-    dbody: document.getElementById('drawer-body'),
-    dclose: document.getElementById('drawer-close'),
-  };
-
-  const KEY = 'MLS_DAILY_STATE_V4';
-
-  const id = () => (crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2));
-
-  const fmtDate = s => !s ? '' : new Date(s).toLocaleDateString('en-CA');
-  const fmtDateTime = s => !s ? '' : new Date(s).toLocaleString();
-  const today = () => new Date().toISOString().slice(0,10);
-  const startOfMonth = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10);
-  const hhmmToMin = t => !t || !t.includes(':') ? 0 : (t.split(':')[0]*60 + (+t.split(':')[1]));
-  const minToHHMM = m => { m = Math.max(0, Math.round(m||0)); const h = Math.floor(m/60), mm = m%60; return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0'); };
-
-  const centresDefault = [
-    'MLS - Colombo 4',
-    'Finnish Preschool - Park Road',
-    'Forest School - Piliyandala',
-    'SenSoMo - One Galle Face',
-    'Forest School - Cape Weligama'
-  ];
-
-  // ===== B. STATE (offline-first) =====
-  let S = null;  // state
-  let user = null;
-  let worksite = '';
-
-  function seed() {
-    S = {
-      _seeded: true,
-      schema: 4,
-      settings: {
-        org: 'MLS Innovations',
-        centres: centresDefault.slice(),
-        breakMins: 30,
-        targetMins: 480,
-        halfDayMins: 240,
-        webhook: '' // set in Settings
-      },
-      staff: [
-        { id: '1001', name: 'John Doe', role: 'Developer', pin: '1001', active: true, defaultWorksite: centresDefault[0], joinDate: '2023-01-10' },
-        { id: '1002', name: 'Jane Smith', role: 'Designer', pin: '1002', active: true, defaultWorksite: centresDefault[1], joinDate: '2023-03-15' },
-      ],
-      profiles: {
-        '1001': { info:{phone:'0771234567', email:'john.d@example.com'}, docs:[], performance:{points:120}, rewards:[] },
-        '1002': { info:{phone:'0719876543', email:'jane.s@example.com'}, docs:[], performance:{points:65}, rewards:[] },
-      },
-      sessions: [
-        { id:id(), staffId:'1001', date: today(), clockIn:'09:00', clockOut:'17:30', centre: centresDefault[0] },
-        { id:id(), staffId:'1002', date: today(), clockIn:'09:15', clockOut:'17:45', centre: centresDefault[1] },
-      ],
-      breaks: [],
-      leaves: [
-        { id:id(), staffId:'1002', type:'Short', date: today(), minutes:60, reason:'Errand', status:'Pending', createdAt:new Date().toISOString() }
-      ],
-      holidays: [ { date:'2025-08-20', title:'Poya Day' } ],
-      inbox: [],
-      salaryRequests: [],
-      shifts: [],
-      notices: [{ id:id(), title:'Welcome!', body:'Please clock-in when you arrive and check the Shift Planner.', centre:'All', createdAt:new Date().toISOString() }],
-      logins: []
-    };
-    save();
-  }
-
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ console.error(e); } }
-
-  function load(){
-    try{
-      const raw = localStorage.getItem(KEY);
-      if(!raw){ seed(); return; }
-      const obj = JSON.parse(raw);
-      if(!obj || typeof obj!=='object'){ seed(); return; }
-      if(!obj.settings || !Array.isArray(obj.staff)){ seed(); return; }
-      // coerce pins to strings
-      obj.staff.forEach(s => { if(s && s.pin!=null) s.pin = String(s.pin); });
-      // migrate centres
-      if(!obj.settings) obj.settings = {};
-      if(typeof obj.settings.centres === 'string'){
-        obj.settings.centres = obj.settings.centres.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      }
-      if(!Array.isArray(obj.settings.centres) || obj.settings.centres.length===0){
-        obj.settings.centres = centresDefault.slice();
-      }
-      S = obj; save();
-    }catch(e){ console.error('load error', e); seed(); }
-  }
-
-  // ===== C. AUTH =====
-  function matchPIN(p){
-    const pin = String(p||'').normalize('NFKC').replace(/\D+/g,'');
-    if(pin==='0000') return { id:'admin', name:'Admin', role:'Admin', active:true };
-    for(const s of (S.staff||[])){
-      const sp = String(s.pin||'').normalize('NFKC').replace(/\D+/g,'');
-      if(sp===pin && s.active!==false) return { id:s.id, name:s.name, role:'Staff', active:true };
-    }
-    return null;
-  }
-
-  async function fetchCloudState(){
-    const url = S?.settings?.webhook;
-    if(!url) return null;
-    try{
-      const r = await fetch(url, { method:'GET' });
-      if(!r.ok) throw new Error(r.status+' '+r.statusText);
-      const data = await r.json();
-      if(data && typeof data==='object'){
-        S = data;
-        // post-load safety
-        if(!Array.isArray(S.settings?.centres) || !S.settings.centres.length){ S.settings.centres = centresDefault.slice(); }
-        if(Array.isArray(S.staff)) S.staff.forEach(s => s.pin = String(s.pin||''));
-        save();
-        return S;
-      }
-    }catch(e){ console.warn('cloud load failed', e); }
-    return null;
-  }
-
-  // ===== D. ROUTER =====
-  const V = {}; // view renderers
-  function show(name){
-    try{
-      [...document.querySelectorAll('.tabs .tab')].forEach(b => b.classList.toggle('active', b.dataset.v===name));
-      const idc = 'view-'+name.replace(/\s+/g,'');
-      let el = document.getElementById(idc);
-      if(!el){ el = document.createElement('section'); el.id = idc; el.className='view'; DOM.main.appendChild(el); }
-      [...document.querySelectorAll('.view')].forEach(v => v.classList.remove('active'));
-      el.classList.add('active');
-      const keys = ['render_'+name.replace(/\s+/g,'_'),'render_'+name.replace(/\s+/g,'')];
-      for(const k of keys){ if(typeof V[k]==='function'){ V[k](el); return; } }
-      el.innerHTML = '<div class="card"><div class="body">View not found: '+name+'</div></div>';
-    }catch(err){ console.error(err); alert('Render error in '+name+': '+(err.message||err)); }
-  }
-
-  function openDrawer(title, html){
-    DOM.dtitle.textContent = title;
-    DOM.dbody.innerHTML = html;
-    DOM.overlay.classList.remove('hidden');
-    DOM.drawer.classList.remove('hidden');
-  }
-  function closeDrawer(){
-    DOM.overlay.classList.add('hidden');
-    DOM.drawer.classList.add('hidden');
-    DOM.dbody.innerHTML='';
-  }
-
-  // ===== E. CALC =====
-  function workedMinutes(staffId, date){
-    const sessions = S.sessions.filter(s => s.staffId===staffId && s.date===date);
-    const leaves = S.leaves.filter(l => l.staffId===staffId && l.date===date && l.status==='Approved');
-    if(leaves.some(l => l.type==='Full')) return 0;
-    let total = 0;
-    for(const s of sessions){ total += Math.max(0, hhmmToMin(s.clockOut) - hhmmToMin(s.clockIn)); }
-    if(total<=0) return 0;
-    let worked = total - S.settings.breakMins;
-    const shortMins = leaves.filter(l => l.type==='Short').reduce((a,b)=>a+(+b.minutes||0),0);
-    worked -= shortMins;
-    if(leaves.some(l => l.type==='Half')) worked = Math.min(worked, S.settings.halfDayMins);
-    return Math.max(0, worked);
-  }
-
-  // ===== F. RENDERERS =====
-  function renderHeader(){
-    const role = user?.role || '—';
-    DOM.who.className = 'badge ' + (role==='Admin'?'admin':'staff');
-    DOM.who.textContent = (role==='Admin'?'Admin':'Staff — '+user.name) + (worksite?(' @ '+worksite):'');
-  }
-  function renderTabs(){
-    const tabs = (user.role==='Admin')
-      ? ['Today','Attendance','Shift Planner','Staff','Leaves','Holidays','Inbox','Rewards','Settings','Export','Notice Board','Payroll']
-      : ['My Dashboard','Clock','My Leaves','My Requests','Company Holidays','Notice Board','My Profile'];
-    DOM.tabs.innerHTML = tabs.map(t => '<button class="tab'+(t===tabs[0]?' active':'')+' btn" data-v="'+t+'">'+t+'</button>').join('');
-    DOM.tabs.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.v));
-  }
-
-  // --- Admin: Today
-  V.render_Today = el => {
-    const centres = ['All'].concat(S.settings.centres||[]);
-    const rows = [];
-    const d = today();
-    for(const s of S.staff){
-      const sess = S.sessions.filter(x => x.staffId===s.id && x.date===d);
-      if(sess.length){
-        const centre = sess[0].centre || (s.defaultWorksite||'');
-        rows.push({ name:s.name, centre, clockIn: sess[0].clockIn, clockOut: sess[0].clockOut });
-      }
-    }
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card">
-          <div class="head"><b>Who’s In Today</b>
-            <select id="flt-centre" class="input" style="max-width:240px">
-              ${centres.map(c=>`<option>${c}</option>`).join('')}
-            </select>
-          </div>
-          <div class="body">
-            <div class="table-wrap"><table>
-              <thead><tr><th>Name</th><th>Centre</th><th>Clock In</th><th>Clock Out</th></tr></thead>
-              <tbody id="today-body">
-                ${rows.map(r=>`<tr><td>${r.name}</td><td>${r.centre}</td><td>${r.clockIn||''}</td><td>${r.clockOut||''}</td></tr>`).join('') || `<tr><td colspan="4">No one has clocked in yet.</td></tr>`}
-              </tbody>
-            </table></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="head"><b>Notice Board</b></div>
-          <div class="body" id="nb-list">
-            ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-              <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
-                <div class="row" style="justify-content:space-between">
-                  <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
-                </div>
-                <div style="margin-top:6px">${n.body}</div>
-              </div>
-            `).join('') || '<div class="small">No notices yet.</div>'}
-          </div>
-        </div>
-      </div>
-    `;
-    const select = el.querySelector('#flt-centre');
-    select.onchange = () => {
-      const c = select.value;
-      const body = el.querySelector('#today-body');
-      const filtered = (c==='All') ? rows : rows.filter(r => r.centre===c);
-      body.innerHTML = filtered.map(r=>`<tr><td>${r.name}</td><td>${r.centre}</td><td>${r.clockIn||''}</td><td>${r.clockOut||''}</td></tr>`).join('') || `<tr><td colspan="4">No one at ${c} today.</td></tr>`;
-    };
-  };
-
-  // --- Admin: Attendance
-  V.render_Attendance = el => {
-    const optionsStaff = ['All'].concat(S.staff.map(x=>x.name));
-    el.innerHTML = `
-      <div class="card">
-        <div class="head"><b>Attendance Log</b></div>
-        <div class="body">
-          <div class="grid cols-3">
-            <div><label>Start</label><input id="a-start" class="input" type="date" value="${startOfMonth()}"></div>
-            <div><label>End</label><input id="a-end" class="input" type="date" value="${today()}"></div>
-            <div><label>Staff</label>
-              <select id="a-staff" class="input">${optionsStaff.map(n=>`<option>${n}</option>`).join('')}</select>
-            </div>
-            <div><label>Centre</label>
-              <select id="a-centre" class="input"><option>All</option>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
-            </div>
-            <div style="align-self:end"><button id="a-run" class="btn primary" style="width:100%">Run</button></div>
-          </div>
-          <div class="table-wrap" style="margin-top:12px"><table>
-            <thead><tr><th>Staff</th><th>Date</th><th>Centre</th><th>Worked (mins)</th><th>Worked (hh:mm)</th></tr></thead>
-            <tbody id="a-body"><tr><td colspan="5">Set filters then Run.</td></tr></tbody>
-          </table></div>
-        </div>
-      </div>
-    `;
-    el.querySelector('#a-run').onclick = () => {
-      const s = el.querySelector('#a-start').value;
-      const e = el.querySelector('#a-end').value;
-      const stf = el.querySelector('#a-staff').value;
-      const cen = el.querySelector('#a-centre').value;
-      const tbody = el.querySelector('#a-body');
-      const seen = new Map();
-      for(const sess of S.sessions){
-        const nm = (S.staff.find(x=>x.id===sess.staffId)?.name)||'Unknown';
-        if(sess.date < s || sess.date > e) continue;
-        if(stf!=='All' && nm!==stf) continue;
-        if(cen!=='All' && (sess.centre||'')!==cen) continue;
-        const key = sess.staffId+'|'+sess.date+'|'+(sess.centre||'');
-        seen.set(key, {staffId:sess.staffId, name:nm, date:sess.date, centre: (sess.centre||'' )});
-      }
-      const rows = [...seen.values()].sort((a,b)=> b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
-      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="5">No records.</td></tr>`; return; }
-      tbody.innerHTML = rows.map(r=>{
-        const mins = workedMinutes(r.staffId, r.date);
-        return `<tr><td>${r.name}</td><td>${fmtDate(r.date)}</td><td>${r.centre}</td><td>${mins}</td><td>${minToHHMM(mins)}</td></tr>`;
-      }).join('');
-    };
-  };
-
-  // --- Admin: Shift Planner
-  V.render_Shift_Planner = el => {
-    const optionsStaff = S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-    const optionsCentre = (S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('');
-    const list = (S.shifts||[]).slice().sort((a,b)=> (a.date+b.start).localeCompare(b.date+b.start));
-    el.innerHTML = `
-      <div class="card">
-        <div class="head"><b>Shift Planner</b></div>
-        <div class="body">
-          <form id="f-shift" class="grid cols-3" novalidate>
-            <div><label>Date</label><input id="sh-date" type="date" class="input" value="${today()}" required></div>
-            <div><label>Centre</label><select id="sh-centre" class="input" required>${optionsCentre}</select></div>
-            <div><label>Staff</label><select id="sh-staff" class="input" required>${optionsStaff}</select></div>
-            <div><label>Start</label><input id="sh-start" type="time" class="input" value="09:00" required></div>
-            <div><label>End</label><input id="sh-end" type="time" class="input" value="17:00" required></div>
-            <div><label>Notes</label><input id="sh-notes" class="input" placeholder="Optional"></div>
-            <div style="align-self:end"><button class="btn primary" style="width:100%">Add Shift</button></div>
-          </form>
-          <div class="table-wrap" style="margin-top:12px"><table>
-            <thead><tr><th>Date</th><th>Centre</th><th>Staff</th><th>Start</th><th>End</th><th></th></tr></thead>
-            <tbody id="sh-body">
-              ${list.map(s=>`<tr data-id="${s.id}"><td>${fmtDate(s.date)}</td><td>${s.centre}</td><td>${S.staff.find(x=>x.id===s.staffId)?.name||'-'}</td><td>${s.start}</td><td>${s.end}</td><td><button class="btn small danger" data-del="${s.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="6">No shifts yet.</td></tr>`}
-            </tbody>
-          </table></div>
-        </div>
-      </div>
-    `;
-    el.querySelector('#f-shift').onsubmit = e => {
-      e.preventDefault();
-      const date = el.querySelector('#sh-date').value;
-      const centre = el.querySelector('#sh-centre').value;
-      const staffId = el.querySelector('#sh-staff').value;
-      const start = el.querySelector('#sh-start').value;
-      const end = el.querySelector('#sh-end').value;
-      if(!date || !centre || !staffId || !start || !end){ alert('Please fill all required fields.'); return; }
-      const sh = { id: id(), date, centre, staffId, start, end, notes: el.querySelector('#sh-notes').value };
-      (S.shifts ||= []).push(sh); save(); show('Shift Planner');
-    };
-    el.querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => {
-      const rid = btn.getAttribute('data-del');
-      S.shifts = (S.shifts||[]).filter(x=>x.id!==rid); save(); show('Shift Planner');
-    });
-  };
-
-  // --- Admin: Staff
-  V.render_Staff = el => {
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card">
-          <div class="head"><b>Add Staff</b></div>
-          <div class="body">
-            <form id="f-add" novalidate>
-              <label>ID</label><input id="st-id" class="input" required>
-              <label>Name</label><input id="st-name" class="input" required>
-              <label>Role</label><input id="st-role" class="input" required>
-              <label>PIN (4 digits)</label><input id="st-pin" class="input" inputmode="numeric" maxlength="6" placeholder="e.g., 1234" required>
-              <label>Default Centre</label>
-              <select id="st-centre" class="input" required>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
-              <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
-            </form>
-          </div>
-        </div>
-        <div class="card">
-          <div class="head"><b>Manage Staff</b></div>
-          <div class="body">
-            <div class="table-wrap"><table>
-              <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Centre</th><th>Status</th><th></th></tr></thead>
-              <tbody id="st-body">
-                ${S.staff.map(s=>`
-                  <tr>
-                    <td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td>
-                    <td>${s.active!==false?'<span class="chip ok">Active</span>':'<span class="chip err">Inactive</span>'}</td>
-                    <td>
-                      <button class="btn small" data-toggle="${s.id}">${s.active!==false?'Deactivate':'Activate'}</button>
-                      <button class="btn small danger" data-remove="${s.id}">Remove</button>
-                      <button class="btn small" data-profile="${s.id}">Profile</button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table></div>
-          </div>
-        </div>
-      </div>
-    `;
-    el.querySelector('#f-add').onsubmit = e => {
-      e.preventDefault();
-      const st = {
-        id: el.querySelector('#st-id').value.trim(),
-        name: el.querySelector('#st-name').value.trim(),
-        role: el.querySelector('#st-role').value.trim(),
-        pin: String(el.querySelector('#st-pin').value||'').replace(/\D+/g,''),
-        active: true,
-        defaultWorksite: el.querySelector('#st-centre').value,
-        joinDate: today()
-      };
-      if(!st.id || S.staff.find(x=>x.id===st.id)){ return alert('ID exists.'); }
-      (S.staff ||= []).push(st);
-      (S.profiles ||= {}); S.profiles[st.id] = {info:{},docs:[],performance:{points:0},rewards:[]};
-      save(); show('Staff');
-    };
-    el.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => {
-      const idd = b.getAttribute('data-toggle');
-      const i = S.staff.findIndex(x=>x.id===idd); if(i<0) return;
-      S.staff[i].active = !(S.staff[i].active!==false); save(); show('Staff');
-    });
-    el.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
-      const idd = b.getAttribute('data-remove');
-      if(!confirm('Remove staff '+idd+'?')) return;
-      S.staff = S.staff.filter(x=>x.id!==idd); save(); show('Staff');
-    });
-    el.querySelectorAll('[data-profile]').forEach(b => b.onclick = () => openProfile(b.getAttribute('data-profile')));
-  };
-
-  function openProfile(staffId){
-    const st = S.staff.find(x=>x.id===staffId);
-    const pf = (S.profiles||{})[staffId] || {info:{},docs:[],performance:{points:0},rewards:[]};
-    const totalDays = S.sessions.filter(s=>s.staffId===staffId).length;
-    const totalMins = S.sessions.filter(s=>s.staffId===staffId).reduce((a,s)=>a+workedMinutes(staffId, s.date),0);
-    const joined = st?.joinDate || '—';
-    openDrawer(st?.name||staffId, `
-      <div class="small">Joined: ${fmtDate(joined)} • Sessions: ${totalDays} • Worked: ${minToHHMM(totalMins)} • Points: ${pf.performance?.points||0}</div>
-      <div style="margin-top:12px" class="grid cols-2">
-        <div>
-          <b>Info</b>
-          <div class="small">Role: ${st?.role||''}</div>
-          <div class="small">Default Centre: ${st?.defaultWorksite||''}</div>
-          <div class="small">Phone: ${pf.info?.phone||''}</div>
-          <div class="small">Email: ${pf.info?.email||''}</div>
-        </div>
-        <div>
-          <b>Documents</b>
-          <div id="doc-list" class="small" style="max-height:160px;overflow:auto;border:1px dashed var(--line);padding:8px;border-radius:8px">
-            ${(pf.docs||[]).map(d=>`<div>• <a download="${d.name}" href="${d.data}">${d.name}</a></div>`).join('') || 'No documents'}
-          </div>
-          <div class="row" style="margin-top:8px">
-            <input id="doc-file" type="file" class="input">
-            <button id="doc-add" class="btn small">Upload</button>
-          </div>
-        </div>
-      </div>
-    `);
-    DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
-    const file = document.getElementById('doc-file');
-    document.getElementById('doc-add').onclick = async () => {
-      if(!file.files.length) return;
-      const f = file.files[0]; const r = new FileReader();
-      r.onload = () => {
-        (pf.docs ||= []).push({ name:f.name, data:r.result });
-        (S.profiles ||= {}); S.profiles[staffId] = pf; save(); closeDrawer(); openProfile(staffId);
-      };
-      r.readAsDataURL(f);
-    };
-  }
-
-  // --- Admin: Leaves
-  V.render_Leaves = el => {
-    const all = (S.leaves||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card">
-          <div class="head"><b>Submit Leave (Admin)</b></div>
-          <div class="body">
-            <form id="f-leave" novalidate>
-              <label>Staff</label>
-              <select id="lv-staff" class="input" required>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
-              <label>Date</label><input id="lv-date" type="date" class="input" value="${today()}" required>
-              <label>Type</label><select id="lv-type" class="input" required><option>Full</option><option>Half</option><option>Short</option></select>
-              <div id="lv-mins-wrap" class="hidden"><label>Minutes (Short)</label><input id="lv-mins" class="input" type="number" placeholder="60"></div>
-              <label>Reason</label><textarea id="lv-reason" class="input"></textarea>
-              <button class="btn primary" style="width:100%;margin-top:8px">Submit (Approved)</button>
-            </form>
-          </div>
-        </div>
-        <div class="card">
-          <div class="head"><b>All Leave Requests</b></div>
-          <div class="body">
-            <div class="table-wrap"><table>
-              <thead><tr><th>Applied</th><th>Staff</th><th>Date</th><th>Type</th><th>Status</th><th></th></tr></thead>
-              <tbody id="lv-body">
-                ${all.map(l=>`
-                  <tr>
-                    <td>${fmtDateTime(l.createdAt)}</td>
-                    <td>${S.staff.find(x=>x.id===l.staffId)?.name||l.staffId}</td>
-                    <td>${fmtDate(l.date)}</td>
-                    <td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td>
-                    <td>${l.status}</td>
-                    <td>
-                      <button class="btn small" data-set="${l.id}|Approved">Approve</button>
-                      <button class="btn small" data-set="${l.id}|Pending">Pend</button>
-                      <button class="btn small danger" data-set="${l.id}|Rejected">Reject</button>
-                    </td>
-                  </tr>
-                `).join('') || '<tr><td colspan="6">No leaves.</td></tr>'}
-              </tbody>
-            </table></div>
-          </div>
-        </div>
-      </div>
-    `;
-    const t = el.querySelector('#lv-type'), w = el.querySelector('#lv-mins-wrap');
-    t.onchange = () => w.classList.toggle('hidden', t.value!=='Short');
-    el.querySelector('#f-leave').onsubmit = e => {
-      e.preventDefault();
-      const l = {
-        id:id(), staffId: el.querySelector('#lv-staff').value,
-        type: t.value, date: el.querySelector('#lv-date').value,
-        minutes: t.value==='Half' ? S.settings.halfDayMins : (t.value==='Full' ? S.settings.targetMins : (+el.querySelector('#lv-mins').value||0)),
-        reason: el.querySelector('#lv-reason').value, status:'Approved', createdAt:new Date().toISOString()
-      };
-      (S.leaves ||= []).push(l); save(); show('Leaves');
-    };
-    el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => {
-      const [idv, st] = b.getAttribute('data-set').split('|');
-      const i = S.leaves.findIndex(x=>x.id===idv); if(i<0) return; S.leaves[i].status = st; save(); show('Leaves');
-    });
-  };
-
-  // --- Admin: Holidays
-  V.render_Holidays = el => {
-    el.innerHTML = `
-      <div class="card">
-        <div class="head"><b>Holidays</b></div>
-        <div class="body">
-          <form id="f-hol" class="grid cols-3" novalidate>
-            <div><label>Date</label><input id="h-date" type="date" class="input" required></div>
-            <div><label>Title</label><input id="h-title" class="input" required></div>
-            <div style="align-self:end"><button class="btn primary" style="width:100%">Add</button></div>
-          </form>
-          <div class="table-wrap" style="margin-top:12px"><table>
-            <thead><tr><th>Date</th><th>Title</th><th></th></tr></thead>
-            <tbody id="h-body">
-              ${(S.holidays||[]).map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td><td><button class="btn small danger" data-del="${h.date}">Delete</button></td></tr>`).join('') || '<tr><td colspan="3">No holidays.</td></tr>'}
-            </tbody>
-          </table></div>
-        </div>
-      </div>
-    `;
-    el.querySelector('#f-hol').onsubmit = e => {
-      e.preventDefault();
-      (S.holidays ||= []).push({ date: el.querySelector('#h-date').value, title: el.querySelector('#h-title').value });
-      save(); show('Holidays');
-    };
-    el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
-      const d = b.getAttribute('data-del'); S.holidays = (S.holidays||[]).filter(h=>h.date!==d); save(); show('Holidays');
-    });
-  };
-
-  // --- Admin: Inbox (requests) includes Salary Request
-  V.render_Inbox = el => {
-    const list = (S.inbox||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    el.innerHTML = `
-      <div class="card">
-        <div class="head"><b>Requests</b></div>
-        <div class="body">
-          <div class="table-wrap"><table>
-            <thead><tr><th>When</th><th>Staff</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
-            <tbody>
-              ${list.map(m=>`<tr><td>${fmtDateTime(m.createdAt)}</td><td>${S.staff.find(s=>s.id===m.staffId)?.name||m.staffId}</td><td>${m.type}</td><td>${m.subject}</td><td>${m.status}</td></tr>`).join('') || '<tr><td colspan="5">No requests.</td></tr>'}
-            </tbody>
-          </table></div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:12px">
-        <div class="head"><b>Salary Requests</b></div>
-        <div class="body">
-          <div class="table-wrap"><table>
-            <thead><tr><th>When</th><th>Staff</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead>
-            <tbody>
-              ${(S.salaryRequests||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(r=>`<tr>
-                <td>${fmtDateTime(r.createdAt)}</td><td>${S.staff.find(s=>s.id===r.staffId)?.name||r.staffId}</td><td>${r.amount}</td><td>${r.reason}</td><td>${r.status}</td>
-              </tr>`).join('') || '<tr><td colspan="5">No salary requests.</td></tr>'}
-            </tbody>
-          </table></div>
-        </div>
-      </div>
-    `;
-  };
-
-  // --- Admin: Rewards
-  V.render_Rewards = el => {
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card"><div class="head"><b>Award Points</b></div><div class="body">
-          <form id="f-rew" novalidate>
-            <label>Staff</label><select id="rw-staff" class="input" required>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
-            <label>Points</label><input id="rw-points" class="input" type="number" value="10" required>
-            <label>Reason</label><input id="rw-reason" class="input" placeholder="Event, OT, etc.">
-            <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
-          </form>
-        </div></div>
-        <div class="card"><div class="head"><b>Totals</b></div><div class="body">
-          <div class="kpi">
-            ${S.staff.map(s=>`<div class="item"><div class="value">${(S.profiles?.[s.id]?.performance?.points)||0}</div><div class="label">${s.name}</div></div>`).join('')}
-          </div>
-        </div></div>
-      </div>
-    `;
-    el.querySelector('#f-rew').onsubmit = e => {
-      e.preventDefault();
-      const sid = el.querySelector('#rw-staff').value;
-      const pts = +el.querySelector('#rw-points').value || 0;
-      const reason = el.querySelector('#rw-reason').value;
-      (S.profiles ||= {}); (S.profiles[sid] ||= {performance:{points:0}});
-      (S.profiles[sid].performance ||= {points:0}).points = (S.profiles[sid].performance.points||0) + pts;
-      (S.profiles[sid].rewards ||= []).push({ id:id(), points:pts, reason, at:new Date().toISOString() });
-      save(); show('Rewards');
-    };
-  };
-
-  // --- Admin: Settings
-  V.render_Settings = el => {
-    el.innerHTML = `
-      <div class="card">
-        <div class="head"><b>Settings</b></div>
-        <div class="body">
-          <form id="f-set" class="grid cols-2" novalidate>
-            <div><label>Organization</label><input id="s-org" class="input" value="${S.settings.org||''}" required></div>
-            <div><label>Daily Break (mins)</label><input id="s-break" class="input" type="number" value="${S.settings.breakMins||30}" required></div>
-            <div><label>Target Work (mins)</label><input id="s-target" class="input" type="number" value="${S.settings.targetMins||480}" required></div>
-            <div><label>Half-day Cap (mins)</label><input id="s-half" class="input" type="number" value="${S.settings.halfDayMins||240}" required></div>
+  <main class="wrap">
+    <!-- Login -->
+    <section id="login" class="login">
+      <div class="box card">
+        <h2 style="margin:0 0 8px 0">Welcome</h2>
+        <p class="subtle" style="margin:0 0 16px 0">Sign in with your PIN and centre.</p>
+        <form id="login-form">
+          <div class="row cols-1">
             <div>
-              <label>Centres</label>
-              <div id="centres-list" class="small" style="border:1px dashed var(--line);padding:8px;border-radius:8px;max-height:160px;overflow:auto;margin-bottom:8px"></div>
-              <div class="row">
-                <input id="centre-new" class="input" placeholder="Add a centre (one at a time)">
-                <button id="centre-add" type="button" class="btn small">Add</button>
-              </div>
+              <label for="worksite">Centre</label>
+              <select id="worksite" required></select>
             </div>
-            <div><label>Webhook URL</label><input id="s-webhook" class="input" placeholder="https://.../mls_daily_state.json" value="${S.settings.webhook||''}"></div>
-            <div style="align-self:end"><button class="btn primary" style="width:100%">Save</button></div>
-          </form>
-          <div class="small" style="margin-top:8px">
-            • Firebase Realtime DB: use an endpoint ending with <code>.json</code> (PUT/GET).<br/>
-            • Other endpoints: we send a JSON <code>POST</code>. If you see “opaque” in the message, it usually means the server blocked CORS but still received the request.
-          </div>
-        </div>
-      </div>
-    `;
-    const listEl = el.querySelector('#centres-list');
-    function renderCentres(){
-      const cs = S.settings.centres||[];
-      if(!cs.length){ listEl.innerHTML = '<div class="small">No centres yet.</div>'; return; }
-      listEl.innerHTML = cs.map((c,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0">
-         <span>${c}</span>
-         <button type="button" class="btn small danger" data-del="${i}">Remove</button>
-      </div>`).join('');
-      listEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ const idx=+b.getAttribute('data-del'); cs.splice(idx,1); S.settings.centres=cs; save(); renderCentres(); populateCentreSelect(); });
-    }
-    renderCentres();
-    el.querySelector('#centre-add').onclick = ()=>{
-      const inp = el.querySelector('#centre-new'); const v = (inp.value||'').trim(); if(!v) return;
-      (S.settings.centres ||= []); S.settings.centres.push(v); save(); inp.value=''; renderCentres(); populateCentreSelect();
-    };
-    el.querySelector('#f-set').onsubmit = e => {
-      e.preventDefault();
-      S.settings.org = el.querySelector('#s-org').value;
-      S.settings.breakMins = +el.querySelector('#s-break').value||30;
-      S.settings.targetMins = +el.querySelector('#s-target').value||480;
-      S.settings.halfDayMins = +el.querySelector('#s-half').value||240;
-      S.settings.webhook = el.querySelector('#s-webhook').value.trim();
-      if(!Array.isArray(S.settings.centres) || !S.settings.centres.length){ S.settings.centres = centresDefault.slice(); }
-      save(); alert('Saved.');
-      populateCentreSelect();
-    };
-  };
-
-  // --- Admin: Export
-  V.render_Export = el => {
-    const download = (name, content, type='text/plain') => {
-      const blob = new Blob([content], {type}); const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    };
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>Export</b></div><div class="body grid cols-3">
-        <button id="ex-staff" class="btn">Staff CSV</button>
-        <button id="ex-sess" class="btn">Sessions CSV</button>
-        <button id="ex-leaves" class="btn">Leaves CSV</button>
-        <button id="ex-shifts" class="btn">Shifts CSV</button>
-        <button id="ex-json" class="btn primary">Full JSON Backup</button>
-      </div></div>
-    `;
-    const toCSV = arr => {
-      if(!arr || !arr.length) return '';
-      const head = Object.keys(arr[0]);
-      const rows = arr.map(o => head.map(k => JSON.stringify(o[k] ?? '')).join(','));
-      return head.join(',') + '\n' + rows.join('\n');
-    };
-    el.querySelector('#ex-staff').onclick = ()=> download('staff.csv', toCSV(S.staff||[]));
-    el.querySelector('#ex-sess').onclick = ()=> download('sessions.csv', toCSV(S.sessions||[]));
-    el.querySelector('#ex-leaves').onclick = ()=> download('leaves.csv', toCSV(S.leaves||[]));
-    el.querySelector('#ex-shifts').onclick = ()=> download('shifts.csv', toCSV(S.shifts||[]));
-    el.querySelector('#ex-json').onclick = ()=> download('mls_backup_'+today()+'.json', JSON.stringify(S,null,2), 'application/json');
-  };
-
-  // --- Admin: Notice Board
-  V.render_Notice_Board = el => {
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card"><div class="head"><b>Post Notice</b></div><div class="body">
-          <form id="f-notice" novalidate>
-            <label>Title</label><input id="n-title" class="input" required>
-            <label>Body</label><textarea id="n-body" class="input" rows="3" required></textarea>
-            <label>Centre</label><select id="n-centre" class="input"><option>All</option>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`)}</select>
-            <button class="btn primary" style="width:100%;margin-top:8px">Publish</button>
-          </form>
-        </div></div>
-        <div class="card"><div class="head"><b>All Notices</b></div><div class="body" id="n-list">
-          ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-            <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
-              <div class="row" style="justify-content:space-between">
-                <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
-              </div>
-              <div style="margin-top:6px">${n.body}</div>
-            </div>
-          `).join('') || '<div class="small">No notices yet.</div>'}
-        </div></div>
-      </div>
-    `;
-    el.querySelector('#f-notice').onsubmit = e => {
-      e.preventDefault();
-      (S.notices ||= []).unshift({ id:id(), title: el.querySelector('#n-title').value, body: el.querySelector('#n-body').value, centre: el.querySelector('#n-centre').value, createdAt: new Date().toISOString() });
-      save(); show('Notice Board');
-    };
-  };
-
-  // --- Admin: Payroll (basic OT calc)
-  V.render_Payroll = el => {
-    const rows = [];
-    for(const s of S.staff){
-      const sess = S.sessions.filter(x=>x.staffId===s.id && x.date>=startOfMonth());
-      const byDate = new Map();
-      for(const x of sess){ byDate.set(x.date, true); }
-      let ot = 0, total = 0;
-      for(const d of byDate.keys()){
-        const mins = workedMinutes(s.id, d); total += mins;
-        if(mins > S.settings.targetMins) ot += (mins - S.settings.targetMins);
-      }
-      rows.push({ name:s.name, total, ot });
-    }
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>Payroll (This Month)</b></div><div class="body">
-        <div class="table-wrap"><table><thead><tr><th>Staff</th><th>Total (hh:mm)</th><th>OT (hh:mm)</th></tr></thead><tbody>
-          ${rows.map(r=>`<tr><td>${r.name}</td><td>${minToHHMM(r.total)}</td><td>${minToHHMM(r.ot)}</td></tr>`).join('')}
-        </tbody></table></div>
-      </div></div>
-    `;
-  };
-
-  // --- Staff: My Dashboard
-  V.render_My_Dashboard = el => {
-    const idd = user.id;
-    const sess = S.sessions.filter(s=>s.staffId===idd && s.date>=startOfMonth());
-    const leaves = S.leaves.filter(l=>l.staffId===idd && l.status==='Approved' && l.date>=startOfMonth());
-    const total = sess.reduce((a,s)=>a+workedMinutes(idd,s.date),0);
-    const points = S.profiles?.[idd]?.performance?.points || 0;
-    el.innerHTML = `
-      <div class="kpi">
-        <div class="item"><div class="value">${minToHHMM(total)}</div><div class="label">Worked (this month)</div></div>
-        <div class="item"><div class="value">${leaves.length}</div><div class="label">Leaves</div></div>
-        <div class="item"><div class="value">${points}</div><div class="label">Points</div></div>
-      </div>
-      <div class="card" style="margin-top:12px"><div class="head"><b>Recent Sessions</b></div><div class="body">
-        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Worked</th></tr></thead><tbody>
-          ${S.sessions.filter(s=>s.staffId===idd).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${s.clockIn}</td><td>${s.clockOut}</td><td>${minToHHMM(workedMinutes(idd, s.date))}</td></tr>`).join('') || '<tr><td colspan="4">No sessions.</td></tr>'}
-        </tbody></table></div>
-      </div></div>
-    `;
-  };
-
-  // --- Staff: Clock
-  V.render_Clock = el => {
-    const d = today();
-    const mySess = S.sessions.filter(s=>s.staffId===user.id && s.date===d);
-    const record = (type) => {
-      if(!worksite){ alert('Please select a centre at login.'); return; }
-      let s = S.sessions.find(x=>x.staffId===user.id && x.date===d);
-      const now = new Date(); const t = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-      if(!s){ s = { id:id(), staffId:user.id, date:d, clockIn:'', clockOut:'', centre: worksite }; S.sessions.push(s); }
-      if(type==='in'){ s.clockIn = t; s.centre = worksite; }
-      if(type==='break'){ (S.breaks ||= []).push({ id:id(), staffId:user.id, date:d, start:t }); }
-      if(type==='resume'){ const b=(S.breaks||[]).reverse().find(b=>b.staffId===user.id && b.date===d && !b.end); if(b) b.end=t; }
-      if(type==='out'){ s.clockOut = t; }
-      save(); show('Clock');
-    };
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>Clock</b></div><div class="body">
-        <div class="row" style="margin-bottom:10px">
-          <button class="btn primary" id="clk-in">Clock In</button>
-          <button class="btn" id="clk-break">Break Start</button>
-          <button class="btn" id="clk-resume">Break End</button>
-          <button class="btn" id="clk-out">Clock Out</button>
-        </div>
-        <div class="small">Today: ${fmtDate(d)} @ ${worksite||'(no centre selected)'}</div>
-        <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Clock In</th><th>Clock Out</th><th>Worked</th></tr></thead><tbody>
-          ${(mySess.length?mySess:[{clockIn:'',clockOut:''}]).map(s=>`<tr><td>${s.clockIn||'-'}</td><td>${s.clockOut||'-'}</td><td>${minToHHMM(workedMinutes(user.id,d))}</td></tr>`).join('')}
-        </tbody></table></div>
-      </div></div>
-    `;
-    el.querySelector('#clk-in').onclick = ()=>record('in');
-    el.querySelector('#clk-break').onclick = ()=>record('break');
-    el.querySelector('#clk-resume').onclick = ()=>record('resume');
-    el.querySelector('#clk-out').onclick = ()=>record('out');
-  };
-
-  // --- Staff: My Leaves
-  V.render_My_Leaves = el => {
-    const my = (S.leaves||[]).filter(l=>l.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card"><div class="head"><b>Request Leave</b></div><div class="body">
-          <form id="f-my-leave" novalidate>
-            <label>Date</label><input id="s-date" type="date" class="input" value="${today()}" required>
-            <label>Type</label><select id="s-type" class="input" required><option>Full</option><option>Half</option><option>Short</option></select>
-            <div id="s-minwrap" class="hidden"><label>Minutes</label><input id="s-min" class="input" type="number" placeholder="60"></div>
-            <label>Reason</label><textarea id="s-reason" class="input"></textarea>
-            <button class="btn primary" style="width:100%;margin-top:8px">Submit</button>
-          </form>
-        </div></div>
-        <div class="card"><div class="head"><b>My Leave History</b></div><div class="body">
-          <div class="table-wrap"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>
-            ${my.map(l=>`<tr><td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td><td>${l.status}</td></tr>`).join('') || '<tr><td colspan="4">No leave requests.</td></tr>'}
-          </tbody></table></div>
-        </div></div>
-      </div>
-    `;
-    const st = el.querySelector('#s-type'), wrap = el.querySelector('#s-minwrap');
-    st.onchange = () => wrap.classList.toggle('hidden', st.value!=='Short');
-    el.querySelector('#f-my-leave').onsubmit = e => {
-      e.preventDefault();
-      const l = { id:id(), staffId:user.id, type:st.value, date: el.querySelector('#s-date').value, minutes: st.value==='Short'?(+el.querySelector('#s-min').value||0):(st.value==='Half'?S.settings.halfDayMins:S.settings.targetMins), reason: el.querySelector('#s-reason').value, status:'Pending', createdAt:new Date().toISOString() };
-      (S.leaves ||= []).push(l); save(); show('My Leaves');
-    };
-  };
-
-  // --- Staff: My Requests + Salary
-  V.render_My_Requests = el => {
-    const list = (S.inbox||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    const sal = (S.salaryRequests||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    el.innerHTML = `
-      <div class="grid cols-2">
-        <div class="card"><div class="head"><b>New Request</b></div><div class="body">
-          <form id="f-req" novalidate>
-            <label>Type</label><select id="rq-type" class="input" required><option>message</option><option>equipment</option></select>
-            <label>Subject</label><input id="rq-subj" class="input" required>
-            <label>Message</label><textarea id="rq-body" class="input" rows="3"></textarea>
-            <button class="btn primary" style="width:100%;margin-top:8px">Send</button>
-          </form>
-          <div style="margin-top:16px;border-top:1px dashed var(--line);padding-top:12px">
-            <b>Salary Request</b>
-            <form id="f-salary" style="margin-top:8px" novalidate>
-              <label>Amount</label><input id="sr-amt" class="input" type="number" placeholder="25000" required>
-              <label>Reason</label><input id="sr-rsn" class="input" placeholder="Advance for ..." required>
-              <button class="btn" style="width:100%;margin-top:8px">Submit Salary Request</button>
-            </form>
-          </div>
-        </div></div>
-        <div class="card"><div class="head"><b>My Requests</b></div><div class="body">
-          <div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead><tbody>
-            ${list.map(m=>`<tr><td>${fmtDateTime(m.createdAt)}</td><td>${m.type}</td><td>${m.subject}</td><td>${m.status}</td></tr>`).join('') || '<tr><td colspan="4">No requests yet.</td></tr>'}
-          </tbody></table></div>
-          <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>When</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>
-            ${sal.map(r=>`<tr><td>${fmtDateTime(r.createdAt)}</td><td>${r.amount}</td><td>${r.reason}</td><td>${r.status}</td></tr>`).join('') || '<tr><td colspan="4">No salary requests yet.</td></tr>'}
-          </tbody></table></div>
-        </div></div>
-      </div>
-    `;
-    el.querySelector('#f-req').onsubmit = e => {
-      e.preventDefault();
-      (S.inbox ||= []).unshift({ id:id(), staffId:user.id, type: el.querySelector('#rq-type').value, subject: el.querySelector('#rq-subj').value, body: el.querySelector('#rq-body').value, status:'Pending', createdAt:new Date().toISOString() });
-      save(); show('My Requests');
-    };
-    el.querySelector('#f-salary').onsubmit = e => {
-      e.preventDefault();
-      (S.salaryRequests ||= []).unshift({ id:id(), staffId:user.id, amount:+el.querySelector('#sr-amt').value||0, reason: el.querySelector('#sr-rsn').value, status:'Pending', createdAt:new Date().toISOString() });
-      save(); show('My Requests');
-    };
-  };
-
-  // --- Staff: Company Holidays
-  V.render_Company_Holidays = el => {
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>Upcoming Holidays</b></div><div class="body">
-        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>
-          ${(S.holidays||[]).filter(h=>h.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td></tr>`).join('') || '<tr><td colspan="2">No upcoming holidays.</td></tr>'}
-        </tbody></table></div>
-      </div></div>
-    `;
-  };
-
-  // --- Staff: Notice Board (read-only)
-  V.render_Notice_Board_Staff = el => {
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>Notice Board</b></div><div class="body">
-        ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
-          <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff">
-            <div class="row" style="justify-content:space-between">
-              <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
-            </div>
-            <div style="margin-top:6px">${n.body}</div>
-          </div>
-        `).join('') || '<div class="small">No notices yet.</div>'}
-      </div></div>
-    `;
-  };
-
-  // --- Staff: My Profile
-  V.render_My_Profile = el => {
-    const pf = (S.profiles?.[user.id]) || {info:{},docs:[],performance:{points:0},rewards:[]};
-    el.innerHTML = `
-      <div class="card"><div class="head"><b>My Profile</b></div><div class="body">
-        <div class="grid cols-2">
-          <div>
-            <div class="small"><b>Name:</b> ${user.name}</div>
-            <div class="small"><b>Role:</b> ${(S.staff.find(s=>s.id===user.id)?.role)||''}</div>
-            <div class="small"><b>Default Centre:</b> ${(S.staff.find(s=>s.id===user.id)?.defaultWorksite)||''}</div>
-            <div class="small"><b>Phone:</b> ${pf.info?.phone||''}</div>
-            <div class="small"><b>Email:</b> ${pf.info?.email||''}</div>
-            <div class="small"><b>Points:</b> ${pf.performance?.points||0}</div>
-          </div>
-          <div>
-            <b>My Documents</b>
-            <div id="pdocs" class="small" style="max-height:160px;overflow:auto;border:1px dashed var(--line);padding:8px;border-radius:8px;margin-top:6px">
-              ${(pf.docs||[]).map(d=>`<div>• <a download="${d.name}" href="${d.data}">${d.name}</a></div>`).join('') || 'No documents'}
-            </div>
-            <div class="row" style="margin-top:8px">
-              <input id="pfile" type="file" class="input">
-              <button id="padd" class="btn small">Upload</button>
+            <div>
+              <label for="pin">PIN</label>
+              <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" />
             </div>
           </div>
-        </div>
-      </div></div>
-    `;
-    document.getElementById('padd').onclick = () => {
-      const inp = document.getElementById('pfile'); if(!inp.files.length) return;
-      const f = inp.files[0]; const r = new FileReader();
-      r.onload = () => {
-        (pf.docs ||= []).push({ name:f.name, data:r.result });
-        (S.profiles ||= {}); S.profiles[user.id] = pf; save(); show('My Profile');
-      };
-      r.readAsDataURL(f);
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button class="btn primary" type="submit" style="flex:1">Login</button>
+          </div>
+          <div id="login-error" class="subtle" style="color:var(--danger);min-height:22px;margin-top:8px"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- App -->
+    <section id="app" class="hidden">
+      <nav id="tabs" class="nav"></nav>
+      <div id="views"></div>
+    </section>
+  </main>
+
+  <script>
+  (function(){
+    'use strict';
+
+    // ---------- DOM
+    const DOM = {
+      login: document.getElementById('login'),
+      app: document.getElementById('app'),
+      worksite: document.getElementById('worksite'),
+      pin: document.getElementById('pin'),
+      frm: document.getElementById('login-form'),
+      err: document.getElementById('login-error'),
+      tabs: document.getElementById('tabs'),
+      views: document.getElementById('views'),
+      badge: document.getElementById('user-badge'),
+      logout: document.getElementById('btn-logout'),
+      sync: document.getElementById('btn-sync'),
+      load: document.getElementById('btn-load'),
+      test: document.getElementById('btn-test'),
     };
-  };
 
-  // ===== G. GLOBAL EVENTS =====
-  function populateCentreSelect(){
-    const list = (S.settings?.centres && S.settings.centres.length) ? S.settings.centres : centresDefault;
-    DOM.site.innerHTML = '<option value="" disabled selected>Select centre</option>' + list.map(c=>`<option>${c}</option>`).join('');
-  }
+    // ---------- Constants & Seed
+    const STORAGE_KEY = 'mls_daily_state_v4';
+    const DEFAULT_CENTRES = [
+      'MLS - Colombo 4',
+      'Finnish Preschool - Park Road',
+      'Forest School - Piliyandala',
+      'SenSoMo - One Galle Face',
+      'Forest School - Cape Weligama'
+    ];
 
-  async function testWebhook(){
-    const url=S.settings.webhook; if(!url){ alert('Webhook URL is empty. Set it in Settings.'); return; }
-    try{
-      const r = await fetch(url, { method:'GET' });
-      if(r.ok){
-        const ct = r.headers.get('content-type')||'';
-        if(ct.includes('application/json')){
-          await r.json(); alert('Webhook reachable and returned JSON ✓');
-        }else{
-          alert('Webhook reachable ✓ (non-JSON response)');
+    const TABS = {
+      Admin: ['Today','Attendance','Shift Planner','Leaves','Holidays','Notices','Salary Requests','Staff','Settings','Export'],
+      Staff: ['My Dashboard','My Leaves','My Requests','Company Holidays','My Profile']
+    };
+
+    let state = {};
+    let user = null;
+    let worksite = '';
+
+    // ---------- Utils
+    const id = () => (crypto.randomUUID ? crypto.randomUUID() : ('id_'+Date.now()+Math.random().toString(36).slice(2)));
+    const today = () => new Date().toISOString().slice(0,10);
+    const fmtDate = (d) => (d? new Date(d).toLocaleDateString('en-CA'):'');
+    const fmtDateTime = (d) => (d? new Date(d).toLocaleString():'');
+    const hhmmToMin = t => { if(!t||!t.includes(':')) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+    const minToHHMM = m => { m=Math.max(0,Math.round(m)); const h=Math.floor(m/60), mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); };
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){ state = JSON.parse(raw); }
+        else { seed(); save(); }
+        // migrations
+        state.settings = state.settings || {};
+        if(typeof state.settings.centres === 'string'){
+          state.settings.centres = state.settings.centres.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
         }
-      }else{
-        alert('Webhook responded with '+r.status+' '+r.statusText);
-      }
-    }catch(e){
-      alert('Could not reach webhook (likely CORS). If this is a Google Apps Script or non-CORS endpoint, Sync will still POST but the browser hides the response.');
+        if(!Array.isArray(state.settings.centres) || !state.settings.centres.length){
+          state.settings.centres = DEFAULT_CENTRES.slice();
+        }
+        (state.loginLogs ||= []);
+      }catch(e){ seed(); save(); }
     }
-  }
 
-  function bindGlobal(){
-    DOM.logout.onclick = () => { user=null; worksite=''; DOM.app.classList.add('hidden'); DOM.login.classList.remove('hidden'); };
-    DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
-    DOM.testWebhook.onclick = testWebhook;
-
-    
-DOM.sync && (DOM.sync.onclick = async () => {
-  const url = S?.settings?.webhook;
-  if(!url){ alert('Webhook URL is not set in Settings.'); return; }
-  try{
-    const isFirebase = /\.json(\?|$)/.test(url);
-    if(isFirebase){
-      const r = await fetch(url,{ method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(S) });
-      if(!r.ok) throw new Error(r.status+' '+r.statusText);
-      alert('Synced to Firebase ✓');
-      return;
-    }
-    // Generic JSON POST; server might be opaque due to CORS
-    const r = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(S) });
-    if(r.ok || r.type==='opaque'){ alert('Sync sent ✓'); } else { throw new Error(r.status+' '+r.statusText); }
-  }catch(e){ alert('Sync failed: '+e.message); }
-});
-
-
-    
-DOM.loadCloud && (DOM.loadCloud.onclick = async () => {
-  const res = await fetchCloudState();
-  if(res){ alert('Loaded from Webhook ✓'); if(user){ renderHeader(); renderTabs(); } else { populateCentreSelect(); } }
-  else { alert('Could not load — check the Webhook URL and CORS.'); }
-});
-
-  }
-
-  // ===== H. LOGIN HANDLER =====
-  DOM.frm.addEventListener('submit', async (e) => {
-    e.preventDefault(); DOM.err.textContent='';
-    try{
-      const pin = (DOM.pin.value||'').toString().normalize('NFKC').replace(/\D+/g,'');
-      const site = DOM.site.value;
-      if(!site){ DOM.err.textContent='Please select a centre.'; DOM.site.focus(); return; }
-      if(!pin){ DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return; }
-
-      let cand = matchPIN(pin);
-      if(!cand){
-        DOM.err.textContent = 'Checking cloud…';
-        const got = await fetchCloudState();
-        cand = got ? matchPIN(pin) : null;
-      }
-      if(!cand){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
-
-      user = { id:cand.id, name:cand.name, role:cand.role };
-      worksite = site;
-
-      // record login + geolocation
-      const commitLogin = (coords) => {
-        (S.logins ||= []).unshift({ id:id(), staffId:user.id, site:worksite, at:new Date().toISOString(), lat:coords?.latitude, lon:coords?.longitude });
-        save();
+    function seed(){
+      state = {
+        settings:{
+          org:'MLS Innovations',
+          centres: DEFAULT_CENTRES.slice(),
+          webhook:'', // set this to Firebase .json or Apps Script URL
+          breakMins:30,
+          targetMins:480,
+          halfDayMins:240,
+          payPeriodStart: today(),
+          payPeriodEnd: today()
+        },
+        staff:[
+          { id:'1001', name:'John Doe',  role:'Teacher',  pin:'1001', active:true },
+          { id:'1002', name:'Jane Smith',role:'Teacher',  pin:'1002', active:true },
+          { id:'1003', name:'Peter Jones',role:'Assistant',pin:'1003', active:false },
+        ],
+        profiles:{
+          '1001':{ info:{ fullName:'Johnathan Doe', idNo:'901234567V', dob:'1990-05-15', address:'123 Main St, Colombo', phone:'0771234567', email:'john.d@example.com', qualifications:'BSc in CS', joinDate:'2023-01-10', remarks:'Team lead for Project X' },
+                   performance:{ points:120, lastReward:'2025-07-01' },
+                   rewards:[{date:'2025-08-05', points:10, reason:'Security training 95%'}],
+                   documents:[] },
+          '1002':{ info:{ fullName:'Jane A. Smith', idNo:'927654321V', dob:'1992-11-20', address:'456 Galle Rd, Dehiwala', phone:'0719876543', email:'jane.s@example.com', qualifications:'BA in Graphic Design', joinDate:'2023-03-15', remarks:'' },
+                   performance:{ points:65, lastReward:null },
+                   rewards:[],
+                   documents:[] },
+        },
+        sessions:[
+          { id:id(), staffId:'1001', date: today(), centre: 'MLS - Colombo 4', clockIn:'09:02', clockOut:'17:30', breaks:[{start:'12:30', end:'13:00'}] },
+          { id:id(), staffId:'1002', date: today(), centre: 'MLS - Colombo 4', clockIn:'09:15', clockOut:'17:45', breaks:[] }
+        ],
+        leaves:[
+          { id:id(), staffId:'1001', type:'Half', date: today(), minutes:240, reason:'Doctor', status:'Approved', createdAt:new Date().toISOString() }
+        ],
+        holidays:[{ date:'2025-08-20', title:'Poya Day' }],
+        notices:[{ id:id(), title:'Welcome to MLS DAILY', body:'All centres please update rosters by Friday.', pinned:true, createdAt:new Date().toISOString() }],
+        shifts:[
+          { id:id(), date: today(), centre:'MLS - Colombo 4', staffId:'1001', start:'09:00', end:'17:30' }
+        ],
+        salary:[
+          { id:id(), staffId:'1002', amount:20000, reason:'Personal', status:'Pending', createdAt:new Date().toISOString() }
+        ],
+        inbox:[],
+        loginLogs:[]
       };
-      if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(p=>commitLogin(p.coords), _=>commitLogin(), { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
-      } else commitLogin();
-
-      DOM.login.classList.add('hidden'); DOM.app.classList.remove('hidden'); renderHeader(); renderTabs();
-      show((user.role==='Admin')? 'Today' : 'My Dashboard');
-      DOM.pin.value='';
-    }catch(err){
-      console.error(err); DOM.err.textContent = 'Login error: '+(err.message||err);
     }
-  });
 
-  // ===== I. INIT =====
-  function init(){
-    load();
-    bindGlobal();
-    populateCentreSelect();
-  }
+    // ----- Cloud helpers
+    async function fetchCloudState(){
+      const url = state?.settings?.webhook;
+      if(!url) return false;
+      try{
+        const r = await fetch(url,{method:'GET'});
+        if(!r.ok) return false;
+        const data = await r.json();
+        if(data && typeof data==='object'){
+          state = data;
+          // migrations again
+          state.settings = state.settings || {};
+          if(typeof state.settings.centres === 'string'){
+            state.settings.centres = state.settings.centres.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+          }
+          if(!Array.isArray(state.settings.centres) || !state.settings.centres.length){
+            state.settings.centres = DEFAULT_CENTRES.slice();
+          }
+          (state.loginLogs ||= []);
+          save();
+          populateCentres();
+          return true;
+        }
+      }catch(e){ console.warn('cloud load failed', e); }
+      return false;
+    }
 
-  document.addEventListener('DOMContentLoaded', init);
-})();
+    async function syncToWebhook(){
+      const url = state?.settings?.webhook;
+      if(!url){ alert('Set Webhook in Settings.'); return; }
+      try{
+        const isFirebase = /\.json(\?|$)/.test(url);
+        if(isFirebase){
+          const r = await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+          if(!r.ok) throw new Error(r.status+' '+r.statusText);
+          alert('Synced to Firebase ✓');
+          return;
+        }
+        // Apps Script / generic (may be opaque)
+        const isAppsScript = url.includes('script.google.com') || url.includes('googleusercontent.com/macros/');
+        if(isAppsScript){
+          const r = await fetch(url,{method:'POST',body:JSON.stringify(state)}); // no headers to avoid preflight
+          if(r.ok || r.type==='opaque'){ alert('Sync sent to Apps Script ✓'); return; }
+          throw new Error(r.status+' '+r.statusText);
+        }
+        const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+        if(r.ok || r.type==='opaque'){ alert('Sync sent ✓'); } else { throw new Error(r.status+' '+r.statusText); }
+      }catch(e){ alert('Sync failed: '+e.message); }
+    }
 
+    async function testWebhook(){
+      const url = state?.settings?.webhook;
+      if(!url){ alert('Webhook URL empty'); return; }
+      try{
+        const r = await fetch(url,{method:'GET'});
+        if(r.ok){
+          const ct=r.headers.get('content-type')||'';
+          if(ct.includes('application/json')){ await r.json(); alert('Webhook reachable ✓ (JSON)'); }
+          else alert('Webhook reachable ✓');
+        }else{
+          alert('Webhook responded '+r.status+' '+r.statusText);
+        }
+      }catch(e){ alert('Could not reach webhook: '+e.message); }
+    }
 
-DOM.frm && (DOM.frm.onsubmit = async function(e){
-  e.preventDefault();
-  if(DOM.err) DOM.err.textContent='';
-  const centre = DOM.site && DOM.site.value || '';
-  if(!centre){ if(DOM.err) DOM.err.textContent = 'Please select a centre.'; return; }
-  const pinRaw = (DOM.pin && DOM.pin.value || '').normalize('NFKC').replace(/\D+/g,'');
-  if(!pinRaw){ if(DOM.err) DOM.err.textContent = 'Enter PIN.'; return; }
+    // ----- Centres
+    function populateCentres(){
+      const list = (state.settings && Array.isArray(state.settings.centres) && state.settings.centres.length)
+        ? state.settings.centres : DEFAULT_CENTRES;
+      DOM.worksite.innerHTML = '<option value="" disabled selected>Select centre</option>'
+        + list.map(c=>`<option>${c}</option>`).join('');
+    }
 
-  function doLogin(u){
-    user = u; worksite = centre;
-    (S.logins ||= []).push({id: (crypto.randomUUID?crypto.randomUUID():('id_'+Date.now())), at: new Date().toISOString(), staffId: u.id||'admin', centre});
-    save();
-    if(DOM.login) DOM.login.classList.add('hidden');
-    if(DOM.app) DOM.app.classList.remove('hidden');
-    if(typeof renderHeader==='function') renderHeader();
-    if(typeof renderTabs==='function') renderTabs();
-    if(typeof show==='function') show(user.role==='Admin' ? 'Today' : 'My Dashboard');
-  }
-
-  const matchPIN = (p)=>{
-    const pin = String(p||'').normalize('NFKC').replace(/\D+/g,'');
-    if(pin==='0000') return { id:'admin', name:'Admin', role:'Admin', active:true };
-    if(S && Array.isArray(S.staff)){
-      for(const s of S.staff){
-        const sp = String(s.pin||'').normalize('NFKC').replace(/\D+/g,'');
-        if(sp===pin && s.active!==false) return { id:s.id, name:s.name, role:'Staff', active:true };
+    // ----- Attendance math
+    function dayWorkedMinutes(staffId, date){
+      const session = state.sessions.filter(s=>s.staffId===staffId && s.date===date);
+      let total = 0;
+      for(const s of session){
+        let mins = hhmmToMin(s.clockOut)-hhmmToMin(s.clockIn);
+        if(Array.isArray(s.breaks)){
+          for(const b of s.breaks){
+            mins -= (hhmmToMin(b.end)-hhmmToMin(b.start));
+          }
+        }
+        total += Math.max(0, mins);
       }
+      // apply daily break
+      total = Math.max(0, total - (state.settings.breakMins||30));
+      // leaves
+      const leaves = state.leaves.filter(l=>l.staffId===staffId && l.date===date && l.status==='Approved');
+      if(leaves.some(l=>l.type==='Full')) return 0;
+      const short = leaves.filter(l=>l.type==='Short').reduce((a,b)=>a+(b.minutes||0),0);
+      total -= short;
+      if(leaves.some(l=>l.type==='Half')){
+        total = Math.min(total, state.settings.halfDayMins||240);
+      }
+      return Math.max(0,total);
     }
-    return null;
-  };
 
-  let u = matchPIN(pinRaw);
-  if(u){ doLogin(u); return; }
+    // ----- Login
+    function sanitizePIN(v){ return String(v||'').normalize('NFKC').replace(/\D+/g,''); }
 
-  await fetchCloudState();
-  u = matchPIN(pinRaw);
-  if(u){ doLogin(u); return; }
+    async function handleLogin(e){
+      e.preventDefault();
+      DOM.err.textContent='';
+      const centre = DOM.worksite.value;
+      const pin = sanitizePIN(DOM.pin.value);
+      if(!centre){ DOM.err.textContent='Please select a centre.'; return; }
+      if(!pin){ DOM.err.textContent='Enter PIN.'; return; }
 
-  if(DOM.err) DOM.err.textContent = 'Invalid PIN or inactive account. Ensure admin synced to webhook, then try again.';
-});
-    
+      function matchLocal(p){
+        if(p==='0000') return { id:'admin', name:'Admin', role:'Admin', active:true };
+        const found = (state.staff||[]).find(s => sanitizePIN(s.pin)===p && s.active!==false);
+        if(found) return { id:found.id, name:found.name, role:'Staff', active:true };
+        return null;
+      }
 
+      let u = matchLocal(pin);
+      if(!u){
+        // cloud-first fallback
+        await fetchCloudState();
+        u = matchLocal(pin);
+      }
+      if(!u){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
 
-DOM.testWebhook && (DOM.testWebhook.onclick = async () => {
-  const url=S?.settings?.webhook;
-  if(!url){ alert('Webhook URL is empty. Set it in Settings.'); return; }
-  try{
-    const r = await fetch(url,{method:'GET'});
-    if(r.ok){
-      const ct=r.headers.get('content-type')||'';
-      if(ct.includes('application/json')){ await r.json(); alert('Webhook reachable ✓ (JSON)'); }
-      else { alert('Webhook reachable ✓'); }
-    }else{
-      alert('Webhook responded '+r.status+' '+r.statusText);
+      user = u; worksite = centre;
+      state.loginLogs.unshift({ id:id(), staffId:u.id, centre, atISO:new Date().toISOString() });
+      save();
+
+      DOM.login.classList.add('hidden');
+      DOM.app.classList.remove('hidden');
+      renderHeader();
+      renderTabs();
+      show(user.role==='Admin' ? 'Today' : 'My Dashboard');
+      DOM.pin.value='';
     }
-  }catch(e){
-    alert('Could not reach webhook: '+e.message);
-  }
-});
 
-</script>
+    // ----- Header, Tabs, Views
+    function renderHeader(){
+      DOM.badge.classList.remove('hidden');
+      DOM.logout.classList.remove('hidden');
+      DOM.badge.textContent = (user.role==='Admin' ? 'ADMIN' : 'STAFF – '+user.name);
+      DOM.badge.className = 'badge ' + (user.role==='Admin' ? 'badge-admin' : 'badge-staff');
+    }
+
+    function renderTabs(){
+      const tabs = TABS[user.role];
+      DOM.tabs.innerHTML = tabs.map(t=>`<button class="tab" data-view="${t}">${t}</button>`).join('');
+      DOM.tabs.querySelectorAll('.tab').forEach(btn=>{
+        btn.addEventListener('click', ()=> show(btn.dataset.view));
+      });
+    }
+
+    function show(name){
+      DOM.tabs.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+      let view = document.getElementById('v-'+name.replace(/\s+/g,''));
+      if(!view){ view = document.createElement('div'); view.id='v-'+name.replace(/\s+/g,''); DOM.views.appendChild(view); }
+      DOM.views.querySelectorAll(':scope > div').forEach(d=>d.classList.add('hidden'));
+      view.classList.remove('hidden');
+
+      const fn = RENDER['render'+name.replace(/\s+/g,'')];
+      if(fn) fn(view); else view.innerHTML = `<div class="card"><h3>${name}</h3><p>Under construction.</p></div>`;
+    }
+
+    // ----- Views
+    const RENDER = {
+      // Admin
+      renderToday(container){
+        const centres = state.settings.centres;
+        const todayDate = today();
+        const working = state.sessions.filter(s=>s.date===todayDate).map(s=>({ ...s, name: (state.staff.find(x=>x.id===s.staffId)||{}).name||s.staffId }));
+        container.innerHTML = `
+          <div class="card">
+            <h3>Who is in today (${fmtDate(todayDate)})</h3>
+            <div class="row cols-2" style="margin-top:10px">
+              ${centres.map(c=>{
+                const crows = working.filter(w=>w.centre===c).sort((a,b)=>a.clockIn.localeCompare(b.clockIn));
+                return `
+                <div class="card" style="margin:0">
+                  <h4 style="margin-top:0">${c}</h4>
+                  <table>
+                    <thead><tr><th>Staff</th><th>In</th><th>Out</th><th>Worked</th></tr></thead>
+                    <tbody>
+                      ${crows.length? crows.map(r=>`<tr><td>${r.name}</td><td>${r.clockIn}</td><td>${r.clockOut||'-'}</td><td>${minToHHMM(dayWorkedMinutes(r.staffId, r.date))}</td></tr>`).join('')
+                        : `<tr><td colspan="4" class="subtle">No sessions yet.</td></tr>`}
+                    </tbody>
+                  </table>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      },
+      renderAttendance(container){
+        const start = today().slice(0,8)+'01';
+        const end = today();
+        container.innerHTML = `
+          <div class="card">
+            <h3>Attendance Log</h3>
+            <div class="row cols-4">
+              <div><label>Start</label><input type="date" id="a-start" value="${start}"></div>
+              <div><label>End</label><input type="date" id="a-end" value="${end}"></div>
+              <div><label>Staff</label><select id="a-staff"><option value="all">All</option>${state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+              <div><label>Centre</label><select id="a-centre"><option value="all">All</option>${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+            </div>
+            <div style="margin-top:10px"><button id="a-filter" class="btn primary">Filter</button></div>
+            <div class="card" style="margin-top:10px">
+              <div class="subtle">Tip: click a row to see session detail.</div>
+              <div class="table-wrap" style="max-height:420px;overflow:auto;margin-top:8px">
+                <table id="a-table"><thead><tr><th>Date</th><th>Staff</th><th>Centre</th><th>Worked (m)</th><th>Worked (hh:mm)</th></tr></thead><tbody><tr><td colspan="5" class="subtle">Apply filters.</td></tr></tbody></table>
+              </div>
+            </div>
+          </div>
+        `;
+        container.querySelector('#a-filter').onclick = () => {
+          const s = container.querySelector('#a-start').value;
+          const e = container.querySelector('#a-end').value;
+          const st = container.querySelector('#a-staff').value;
+          const ce = container.querySelector('#a-centre').value;
+          const days = new Set(state.sessions.filter(x=>x.date>=s && x.date<=e && (st==='all'||x.staffId===st) && (ce==='all'||x.centre===ce)).map(x=>`${x.staffId}|${x.date}|${x.centre}`));
+          const rows = [];
+          days.forEach(key=>{
+            const [sid,d,c] = key.split('|');
+            const mins = dayWorkedMinutes(sid,d);
+            const name = (state.staff.find(s=>s.id===sid)||{}).name||sid;
+            rows.push({d,name,c,mins,sid});
+          });
+          rows.sort((a,b)=> b.d.localeCompare(a.d) || a.name.localeCompare(b.name));
+          const tb = container.querySelector('#a-table tbody');
+          tb.innerHTML = rows.length? rows.map(r=>`<tr data-s="${r.sid}" data-d="${r.d}" data-c="${r.c}" style="cursor:pointer"><td>${fmtDate(r.d)}</td><td>${r.name}</td><td>${r.c}</td><td>${r.mins}</td><td>${minToHHMM(r.mins)}</td></tr>`).join('') : `<tr><td colspan="5" class="subtle">No data.</td></tr>`;
+          tb.querySelectorAll('tr[data-s]').forEach(tr=>{
+            tr.onclick = () => {
+              const sid = tr.dataset.s, d = tr.dataset.d, c = tr.dataset.c;
+              const sessions = state.sessions.filter(s=>s.staffId===sid && s.date===d && s.centre===c);
+              alert(`${(state.staff.find(s=>s.id===sid)||{}).name||sid} @ ${c}\n${fmtDate(d)}\n\n` + (sessions.length? sessions.map(s=>`In: ${s.clockIn}  Out: ${s.clockOut||'-'}  Breaks: ${(s.breaks||[]).map(b=>b.start+'-'+b.end).join(', ')||'-'}`).join('\n') : 'No sessions.'));
+            };
+          });
+        };
+      },
+      renderShiftPlanner(container){
+        container.innerHTML = `
+          <div class="card">
+            <h3>Shift Planner</h3>
+            <div class="row cols-4">
+              <div><label>Date</label><input type="date" id="sp-date" value="${today()}"></div>
+              <div><label>Centre</label><select id="sp-centre">${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+              <div><label>Staff</label><select id="sp-staff">${state.staff.filter(s=>s.active!==false).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+              <div class="row cols-2">
+                <div><label>Start</label><input type="time" id="sp-start" value="09:00"></div>
+                <div><label>End</label><input type="time" id="sp-end" value="17:30"></div>
+              </div>
+            </div>
+            <div style="margin-top:10px"><button id="sp-add" class="btn primary">Add / Update</button></div>
+            <div class="card" style="margin-top:10px">
+              <div class="row cols-3">
+                <div><label>View Date</label><input type="date" id="sv-date" value="${today()}"></div>
+                <div><label>Centre</label><select id="sv-centre"><option value="all">All</option>${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+                <div style="display:flex;align-items:flex-end"><button id="sv-refresh" class="btn">Refresh</button></div>
+              </div>
+              <div style="margin-top:8px;max-height:420px;overflow:auto">
+                <table id="sp-table"><thead><tr><th>Date</th><th>Centre</th><th>Staff</th><th>Start</th><th>End</th><th></th></tr></thead><tbody></tbody></table>
+              </div>
+            </div>
+          </div>
+        `;
+        container.querySelector('#sp-add').onclick = () => {
+          const d = container.querySelector('#sp-date').value;
+          const c = container.querySelector('#sp-centre').value;
+          const sid = container.querySelector('#sp-staff').value;
+          const st = container.querySelector('#sp-start').value;
+          const en = container.querySelector('#sp-end').value;
+          let rec = state.shifts.find(s=>s.date===d && s.centre===c && s.staffId===sid);
+          if(rec){ rec.start=st; rec.end=en; }
+          else { state.shifts.push({ id:id(), date:d, centre:c, staffId:sid, start:st, end:en }); }
+          save(); draw();
+        };
+        container.querySelector('#sv-refresh').onclick = draw;
+        function draw(){
+          const d = container.querySelector('#sv-date').value;
+          const c = container.querySelector('#sv-centre').value;
+          const rows = state.shifts.filter(s=>s.date===d && (c==='all'||s.centre===c)).map(s=>({ ...s, name:(state.staff.find(x=>x.id===s.staffId)||{}).name||s.staffId }));
+          const tb = container.querySelector('#sp-table tbody');
+          tb.innerHTML = rows.length? rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${r.centre}</td><td>${r.name}</td><td>${r.start}</td><td>${r.end}</td><td><button data-id="${r.id}" class="btn danger" style="padding:6px 10px">Remove</button></td></tr>`).join('') : `<tr><td colspan="6" class="subtle">No shifts.</td></tr>`;
+          tb.querySelectorAll('button[data-id]').forEach(b=>{
+            b.onclick=()=>{ const idx = state.shifts.findIndex(x=>x.id===b.dataset.id); if(idx>-1){ state.shifts.splice(idx,1); save(); draw(); } };
+          });
+        }
+        draw();
+      },
+      renderLeaves(container){
+        const all = state.leaves.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Submit Leave (Admin)</h3>
+              <div class="row cols-2">
+                <div><label>Staff</label><select id="lv-staff">${state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+                <div><label>Date</label><input type="date" id="lv-date" value="${today()}"></div>
+                <div><label>Type</label><select id="lv-type"><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="lv-mins-wrap"><label>Minutes (Short)</label><input id="lv-mins" type="number" placeholder="e.g. 60"></div>
+                <div class="row cols-1"><label>Reason</label><textarea id="lv-reason" rows="2"></textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="lv-add" class="btn primary">Submit</button></div>
+            </div>
+            <div class="card">
+              <h3>All Leave Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Applied</th><th>Date</th><th>Staff</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody id="lv-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        const wrap = container.querySelector('#lv-mins-wrap');
+        container.querySelector('#lv-type').onchange = e => wrap.style.display = (e.target.value==='Short'?'block':'none');
+        container.querySelector('#lv-add').onclick = () => {
+          const obj = {
+            id:id(), staffId:container.querySelector('#lv-staff').value, type:container.querySelector('#lv-type').value,
+            date:container.querySelector('#lv-date').value, minutes: Number(container.querySelector('#lv-mins').value)||0,
+            reason:container.querySelector('#lv-reason').value, status:'Approved', createdAt:new Date().toISOString()
+          };
+          if(obj.type==='Half') obj.minutes = state.settings.halfDayMins||240;
+          if(obj.type==='Full') obj.minutes = state.settings.targetMins||480;
+          state.leaves.push(obj); save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#lv-tb');
+          const list = state.leaves.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+          tb.innerHTML = list.map(l=>`<tr>
+            <td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${(state.staff.find(s=>s.id===l.staffId)||{}).name||l.staffId}</td>
+            <td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td>
+            <td><span class="status ${l.status}">${l.status}</span></td>
+            <td>
+              <button class="btn" data-s="Approved" data-id="${l.id}">Approve</button>
+              <button class="btn" data-s="Pending" data-id="${l.id}">Pend</button>
+              <button class="btn danger" data-s="Rejected" data-id="${l.id}">Reject</button>
+            </td>
+          </tr>`).join('');
+          tb.querySelectorAll('button[data-id]').forEach(b=>{
+            b.onclick=()=>{ const l = state.leaves.find(x=>x.id===b.dataset.id); if(l){ l.status=b.dataset.s; save(); draw(); } };
+          });
+        }
+        draw();
+      },
+      renderHolidays(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Add Holiday</h3>
+              <div class="row cols-2">
+                <div><label>Date</label><input type="date" id="hd-date" value="${today()}"></div>
+                <div><label>Title</label><input id="hd-title" placeholder="Holiday name"></div>
+              </div>
+              <div style="margin-top:10px"><button id="hd-add" class="btn primary">Add</button></div>
+            </div>
+            <div class="card">
+              <h3>Upcoming Holidays</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Date</th><th>Title</th><th></th></tr></thead><tbody id="hd-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#hd-add').onclick=()=>{
+          state.holidays.push({date:container.querySelector('#hd-date').value, title:container.querySelector('#hd-title').value}); save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#hd-tb');
+          const list = state.holidays.slice().sort((a,b)=> a.date.localeCompare(b.date));
+          tb.innerHTML = list.length? list.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td><td><button class="btn danger" data-d="${h.date}" data-t="${h.title}">Remove</button></td></tr>`).join('') : `<tr><td colspan="3" class="subtle">None</td></tr>`;
+          tb.querySelectorAll('button[data-d]').forEach(b=> b.onclick=()=>{ const i = state.holidays.findIndex(x=>x.date===b.dataset.d && x.title===b.dataset.t); if(i>-1){ state.holidays.splice(i,1); save(); draw(); } });
+        }
+        draw();
+      },
+      renderNotices(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Post Notice</h3>
+              <div class="row cols-2">
+                <div><label>Title</label><input id="nc-title"></div>
+                <div><label>Pinned</label><select id="nc-pin"><option value="true">Yes</option><option value="false">No</option></select></div>
+              </div>
+              <div><label>Body</label><textarea id="nc-body" rows="3"></textarea></div>
+              <div style="margin-top:10px"><button id="nc-add" class="btn primary">Publish</button></div>
+            </div>
+            <div class="card">
+              <h3>Notice Board</h3>
+              <div id="nc-list" class="row cols-2"></div>
+            </div>
+          </div>`;
+        container.querySelector('#nc-add').onclick=()=>{
+          state.notices.unshift({id:id(), title:container.querySelector('#nc-title').value, body:container.querySelector('#nc-body').value, pinned:container.querySelector('#nc-pin').value==='true', createdAt:new Date().toISOString()});
+          save(); draw();
+        };
+        function draw(){
+          const box = container.querySelector('#nc-list');
+          const list = state.notices.slice().sort((a,b)=> (b.pinned?-1:1) - (a.pinned?-1:1) || new Date(b.createdAt)-new Date(a.createdAt));
+          box.innerHTML = list.map(n=>`
+            <div class="card" style="margin:0">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <h4 style="margin:0">${n.title}</h4>
+                ${n.pinned?'<span class="tag">Pinned</span>':''}
+              </div>
+              <div class="subtle" style="margin:4px 0">${fmtDateTime(n.createdAt)}</div>
+              <p>${n.body||''}</p>
+              <div class="sticky-footer"><button class="btn danger" data-id="${n.id}">Remove</button></div>
+            </div>`).join('');
+          box.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const i = state.notices.findIndex(x=>x.id===b.dataset.id); if(i>-1){ state.notices.splice(i,1); save(); draw(); } });
+        }
+        draw();
+      },
+      renderSalaryRequests(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>All Salary Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Requested</th><th>Staff</th><th>Amount</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sr-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        function draw(){
+          const tb = container.querySelector('#sr-tb');
+          const list = state.salary.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+          tb.innerHTML = list.length? list.map(r=>`<tr>
+            <td>${fmtDateTime(r.createdAt)}</td>
+            <td>${(state.staff.find(s=>s.id===r.staffId)||{}).name||r.staffId}</td>
+            <td>${r.amount}</td><td>${r.reason||''}</td>
+            <td><span class="status ${r.status}">${r.status}</span></td>
+            <td>
+              <button class="btn" data-s="Approved" data-id="${r.id}">Approve</button>
+              <button class="btn" data-s="Pending" data-id="${r.id}">Pend</button>
+              <button class="btn danger" data-s="Rejected" data-id="${r.id}">Reject</button>
+            </td>
+          </tr>`).join('') : `<tr><td colspan="6" class="subtle">No requests.</td></tr>`;
+          tb.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const r = state.salary.find(x=>x.id===b.dataset.id); if(r){ r.status=b.dataset.s; save(); draw(); } });
+        }
+        draw();
+      },
+      renderStaff(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Add Staff</h3>
+              <div class="row cols-3">
+                <div><label>ID</label><input id="st-id"></div>
+                <div><label>Name</label><input id="st-name"></div>
+                <div><label>Role</label><input id="st-role" placeholder="Teacher/Assistant"></div>
+                <div><label>PIN</label><input id="st-pin" inputmode="numeric" placeholder="4 digits"></div>
+                <div><label>Status</label><select id="st-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+              </div>
+              <div style="margin-top:10px"><button id="st-add" class="btn primary">Add</button></div>
+            </div>
+            <div class="card">
+              <h3>Staff</h3>
+              <div style="max-height:460px;overflow:auto">
+                <table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="st-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#st-add').onclick = () => {
+          const idv = container.querySelector('#st-id').value.trim();
+          if(!idv){ alert('ID required'); return; }
+          if(state.staff.some(s=>s.id===idv)){ alert('ID exists'); return; }
+          const obj = { id:idv, name:container.querySelector('#st-name').value.trim(), role:container.querySelector('#st-role').value.trim(),
+            pin:String(container.querySelector('#st-pin').value||'').replace(/\D+/g,''), active:container.querySelector('#st-active').value==='true' };
+          state.staff.push(obj);
+          if(!state.profiles[idv]) state.profiles[idv] = { info:{ fullName:obj.name, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
+          save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#st-tb');
+          tb.innerHTML = state.staff.map(s=>`<tr>
+            <td>${s.id}</td><td>${s.name}</td><td>${s.role||''}</td>
+            <td><span class="status ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td>
+            <td>
+              <button class="btn" data-id="${s.id}" data-a="${s.active?'deact':'act'}">${s.active?'Deactivate':'Activate'}</button>
+              <button class="btn" data-id="${s.id}" data-a="profile">Profile</button>
+              <button class="btn danger" data-id="${s.id}" data-a="remove">Remove</button>
+            </td>
+          </tr>`).join('');
+          tb.querySelectorAll('button[data-id]').forEach(b=> b.onclick = () => {
+            const s = state.staff.find(x=>x.id===b.dataset.id);
+            if(!s) return;
+            if(b.dataset.a==='deact'){ s.active=false; }
+            else if(b.dataset.a==='act'){ s.active=true; }
+            else if(b.dataset.a==='remove'){ if(confirm('Remove staff?')){ state.staff = state.staff.filter(x=>x.id!==s.id); delete state.profiles[s.id]; } }
+            else if(b.dataset.a==='profile'){ openProfileAdmin(s.id); return; }
+            save(); draw();
+          });
+        }
+        draw();
+      },
+      renderSettings(container){
+        container.innerHTML = `
+          <div class="card">
+            <h3>Settings</h3>
+            <div class="row cols-3">
+              <div><label>Organization</label><input id="se-org" value="${state.settings.org||''}"></div>
+              <div><label>Daily Break (mins)</label><input id="se-break" type="number" value="${state.settings.breakMins||30}"></div>
+              <div><label>Target Work (mins)</label><input id="se-target" type="number" value="${state.settings.targetMins||480}"></div>
+              <div><label>Half-day Cap (mins)</label><input id="se-half" type="number" value="${state.settings.halfDayMins||240}"></div>
+              <div><label>Pay Start</label><input id="se-ps" type="date" value="${state.settings.payPeriodStart||today()}"></div>
+              <div><label>Pay End</label><input id="se-pe" type="date" value="${state.settings.payPeriodEnd||today()}"></div>
+              <div class="row cols-1">
+                <label>Centres (one per line)</label>
+                <textarea id="se-centres" rows="5">${(state.settings.centres||[]).join('\n')}</textarea>
+              </div>
+              <div class="row cols-1">
+                <label>Webhook URL</label>
+                <input id="se-webhook" value="${state.settings.webhook||''}" placeholder="Firebase .json or Apps Script URL">
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button id="se-save" class="btn primary">Save</button>
+              <button id="se-test" class="btn">Test Webhook</button>
+              <button id="se-sync" class="btn">Sync → Webhook</button>
+              <button id="se-load" class="btn">Load from Webhook</button>
+            </div>
+          </div>`;
+        container.querySelector('#se-save').onclick=()=>{
+          state.settings.org = container.querySelector('#se-org').value;
+          state.settings.breakMins = container.querySelector('#se-break').valueAsNumber||30;
+          state.settings.targetMins = container.querySelector('#se-target').valueAsNumber||480;
+          state.settings.halfDayMins = container.querySelector('#se-half').valueAsNumber||240;
+          state.settings.payPeriodStart = container.querySelector('#se-ps').value;
+          state.settings.payPeriodEnd = container.querySelector('#se-pe').value;
+          const centres = container.querySelector('#se-centres').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+          state.settings.centres = centres.length? centres : DEFAULT_CENTRES.slice();
+          state.settings.webhook = container.querySelector('#se-webhook').value.trim();
+          save(); populateCentres(); alert('Saved.');
+        };
+        container.querySelector('#se-test').onclick=testWebhook;
+        container.querySelector('#se-sync').onclick=syncToWebhook;
+        container.querySelector('#se-load').onclick=async()=>{ const ok=await fetchCloudState(); alert(ok?'Loaded ✓':'Load failed'); };
+      },
+      renderExport(container){
+        container.innerHTML = `
+          <div class="card">
+            <h3>Export</h3>
+            <div class="row cols-3">
+              <button class="btn" id="ex-staff">Staff CSV</button>
+              <button class="btn" id="ex-sessions">Sessions CSV</button>
+              <button class="btn" id="ex-leaves">Leaves CSV</button>
+              <button class="btn" id="ex-holidays">Holidays CSV</button>
+              <button class="btn primary" id="ex-json">Full Backup (JSON)</button>
+            </div>
+          </div>`;
+        function download(name, mime, content){
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+          a.download = name; a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+        }
+        function csv(arr){
+          if(!arr.length) return '';
+          const keys = Object.keys(arr[0]);
+          return [keys.join(','), ...arr.map(o=> keys.map(k=> JSON.stringify(o[k]??'')).join(',')) ].join('\n');
+        }
+        container.querySelector('#ex-staff').onclick=()=> download('staff.csv','text/csv', csv(state.staff));
+        container.querySelector('#ex-sessions').onclick=()=> download('sessions.csv','text/csv', csv(state.sessions));
+        container.querySelector('#ex-leaves').onclick=()=> download('leaves.csv','text/csv', csv(state.leaves));
+        container.querySelector('#ex-holidays').onclick=()=> download('holidays.csv','text/csv', csv(state.holidays));
+        container.querySelector('#ex-json').onclick=()=> download(`mls_daily_${today()}.json`,'application/json', JSON.stringify(state,null,2));
+      },
+
+      // Staff-facing
+      renderMyDashboard(container){
+        const sid = user.id;
+        const monthStart = new Date(); monthStart.setDate(1); const ms = monthStart.toISOString().slice(0,10);
+        const monthSessions = state.sessions.filter(s=>s.staffId===sid && s.date>=ms);
+        const totalMins = Array.from(new Set(monthSessions.map(s=>s.date))).reduce((acc,d)=> acc + dayWorkedMinutes(sid,d), 0);
+        const target = (state.settings.targetMins||480) * new Set(monthSessions.map(s=>s.date)).size;
+        const overtime = Math.max(0, totalMins - target);
+        const profile = state.profiles[sid]||{info:{},performance:{points:0},rewards:[]};
+
+        container.innerHTML = `
+          <div class="card">
+            <h3>My Summary (This Month)</h3>
+            <div class="kpis">
+              <div class="kpi"><div class="value">${minToHHMM(totalMins)}</div><div class="subtle">Worked Hours</div></div>
+              <div class="kpi"><div class="value">${minToHHMM(overtime)}</div><div class="subtle">Overtime</div></div>
+              <div class="kpi"><div class="value">${profile.performance?.points||0}</div><div class="subtle">Points</div></div>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <h3>Record Attendance (Today)</h3>
+              <div class="row cols-2">
+                <div><label>Clock In</label><input type="time" id="md-in" value="09:00"></div>
+                <div><label>Clock Out</label><input type="time" id="md-out" value="17:30"></div>
+              </div>
+              <div class="row cols-2">
+                <div><label>Break Start</label><input type="time" id="md-bs" value=""></div>
+                <div><label>Break End</label><input type="time" id="md-be" value=""></div>
+              </div>
+              <div style="margin-top:10px"><button id="md-add" class="btn primary">Add Session</button></div>
+            </div>
+            <div class="card">
+              <h3>Recent Sessions</h3>
+              <div style="max-height:360px;overflow:auto">
+                <table><thead><tr><th>Date</th><th>Centre</th><th>In</th><th>Out</th><th>Breaks</th><th>Worked</th></tr></thead><tbody id="md-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#md-add').onclick=()=>{
+          const ci = container.querySelector('#md-in').value;
+          const co = container.querySelector('#md-out').value;
+          const bs = container.querySelector('#md-bs').value;
+          const be = container.querySelector('#md-be').value;
+          const rec = { id:id(), staffId:sid, date:today(), centre:worksite, clockIn:ci, clockOut:co, breaks:[] };
+          if(bs && be) rec.breaks.push({start:bs, end:be});
+          state.sessions.push(rec); save(); draw();
+        };
+        function draw(){
+          const list = state.sessions.filter(s=>s.staffId===sid).sort((a,b)=> b.date.localeCompare(a.date)).slice(0,20);
+          const tb = container.querySelector('#md-tb');
+          tb.innerHTML = list.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${s.centre}</td><td>${s.clockIn}</td><td>${s.clockOut||'-'}</td><td>${(s.breaks||[]).map(b=>b.start+'-'+b.end).join(', ')||'-'}</td><td>${minToHHMM(dayWorkedMinutes(s.staffId,s.date))}</td></tr>`).join('');
+        }
+        draw();
+      },
+      renderMyLeaves(container){
+        const my = state.leaves.filter(l=>l.staffId===user.id).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Request Leave</h3>
+              <div class="row cols-2">
+                <div><label>Date</label><input id="sl-date" type="date" value="${today()}"></div>
+                <div><label>Type</label><select id="sl-type"><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="sl-mins-wrap"><label>Minutes (Short)</label><input id="sl-mins" type="number" placeholder="60"></div>
+                <div class="row cols-1"><label>Reason</label><textarea id="sl-reason" rows="2"></textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="sl-send" class="btn primary">Submit</button></div>
+            </div>
+            <div class="card">
+              <h3>My Leave History</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody id="sl-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        const wrap = container.querySelector('#sl-mins-wrap');
+        container.querySelector('#sl-type').onchange=e=> wrap.style.display=(e.target.value==='Short'?'block':'none');
+        container.querySelector('#sl-send').onclick=()=>{
+          const obj = { id:id(), staffId:user.id, type:container.querySelector('#sl-type').value, date:container.querySelector('#sl-date').value,
+                        minutes:Number(container.querySelector('#sl-mins').value)||0, reason:container.querySelector('#sl-reason').value,
+                        status:'Pending', createdAt:new Date().toISOString() };
+          if(obj.type==='Half') obj.minutes = state.settings.halfDayMins||240;
+          if(obj.type==='Full') obj.minutes = state.settings.targetMins||480;
+          state.leaves.push(obj); save(); draw();
+          alert('Leave request submitted.');
+        };
+        function draw(){
+          const tb = container.querySelector('#sl-tb');
+          tb.innerHTML = my.map(l=>`<tr><td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td><td><span class="status ${l.status}">${l.status}</span></td></tr>`).join('') || `<tr><td colspan="4" class="subtle">No leaves yet.</td></tr>`;
+        }
+        draw();
+      },
+      renderMyRequests(container){
+        const mine = state.salary.filter(r=>r.staffId===user.id).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Request Salary Advance</h3>
+              <div class="row cols-2">
+                <div><label>Amount</label><input id="rq-amt" type="number" placeholder="20000"></div>
+                <div class="row cols-1"><label>Reason</label><input id="rq-reason"></div>
+              </div>
+              <div style="margin-top:10px"><button id="rq-send" class="btn primary">Send</button></div>
+            </div>
+            <div class="card">
+              <h3>My Salary Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Requested</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody id="rq-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#rq-send').onclick=()=>{
+          const amt = Number(container.querySelector('#rq-amt').value)||0;
+          const reason = container.querySelector('#rq-reason').value||'';
+          state.salary.unshift({ id:id(), staffId:user.id, amount:amt, reason, status:'Pending', createdAt:new Date().toISOString() });
+          save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#rq-tb');
+          tb.innerHTML = mine.length? mine.map(r=>`<tr><td>${fmtDateTime(r.createdAt)}</td><td>${r.amount}</td><td>${r.reason||''}</td><td><span class="status ${r.status}">${r.status}</span></td></tr>`).join('') : `<tr><td colspan="4" class="subtle">No requests.</td></tr>`;
+        }
+        draw();
+      },
+      renderCompanyHolidays(container){
+        const list = state.holidays.filter(h=> new Date(h.date)>= new Date(today())).sort((a,b)=> a.date.localeCompare(b.date));
+        container.innerHTML = `
+          <div class="card">
+            <h3>Upcoming Company Holidays</h3>
+            <div style="max-height:420px;overflow:auto">
+              <table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>${list.length? list.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td></tr>`).join('') : `<tr><td colspan="2" class="subtle">No upcoming holidays.</td></tr>`}</tbody></table>
+            </div>
+          </div>`;
+      },
+      renderMyProfile(container){
+        const prof = state.profiles[user.id] || { info:{}, performance:{points:0}, rewards:[], documents:[] };
+        const info = prof.info||{};
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>My Profile</h3>
+              <div class="row cols-2">
+                <div><label>Full Name</label><input id="pf-name" value="${info.fullName||''}"></div>
+                <div><label>ID No</label><input id="pf-idno" value="${info.idNo||''}"></div>
+                <div><label>DOB</label><input id="pf-dob" type="date" value="${info.dob||''}"></div>
+                <div><label>Phone</label><input id="pf-phone" value="${info.phone||''}"></div>
+                <div><label>Email</label><input id="pf-email" value="${info.email||''}"></div>
+                <div><label>Joined</label><input id="pf-join" type="date" value="${info.joinDate||''}"></div>
+                <div class="row cols-1"><label>Address</label><textarea id="pf-address" rows="2">${info.address||''}</textarea></div>
+                <div class="row cols-1"><label>Qualifications</label><input id="pf-qual" value="${info.qualifications||''}"></div>
+                <div class="row cols-1"><label>Remarks</label><textarea id="pf-remarks" rows="2">${info.remarks||''}</textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="pf-save" class="btn primary">Save</button></div>
+              <div class="kpis" style="margin-top:10px">
+                <div class="kpi"><div class="value">${(prof.performance?.points)||0}</div><div class="subtle">Points</div></div>
+                <div class="kpi"><div class="value">${prof.rewards.length}</div><div class="subtle">Rewards</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3>My Documents</h3>
+              <div><input id="pf-file" type="file" multiple /></div>
+              <div id="pf-docs" class="row cols-2" style="margin-top:10px"></div>
+            </div>
+          </div>`;
+        container.querySelector('#pf-save').onclick=()=>{
+          const P = state.profiles[user.id] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+          const I = P.info;
+          I.fullName = container.querySelector('#pf-name').value;
+          I.idNo = container.querySelector('#pf-idno').value;
+          I.dob = container.querySelector('#pf-dob').value;
+          I.phone = container.querySelector('#pf-phone').value;
+          I.email = container.querySelector('#pf-email').value;
+          I.joinDate = container.querySelector('#pf-join').value;
+          I.address = container.querySelector('#pf-address').value;
+          I.qualifications = container.querySelector('#pf-qual').value;
+          I.remarks = container.querySelector('#pf-remarks').value;
+          save(); alert('Saved.');
+        };
+        const input = container.querySelector('#pf-file');
+        input.onchange = async (e)=>{
+          const files = Array.from(e.target.files||[]);
+          if(!files.length) return;
+          const P = state.profiles[user.id] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+          for(const f of files){
+            const data = await f.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+            P.documents.push({ id:id(), name:f.name, type:f.type, size:f.size, data:'data:'+f.type+';base64,'+base64, addedAt:new Date().toISOString() });
+          }
+          save(); drawDocs();
+        };
+        function drawDocs(){
+          const P = state.profiles[user.id]||{documents:[]};
+          const box = container.querySelector('#pf-docs'); box.innerHTML = (P.documents||[]).map(d=>`
+            <div class="card" style="margin:0">
+              <div style="display:flex;justify-content:space-between;align-items:center"><strong>${d.name}</strong><span class="subtle">${Math.round(d.size/1024)} KB</span></div>
+              <div class="subtle">${fmtDateTime(d.addedAt)}</div>
+              <div class="sticky-footer">
+                <a class="btn" href="${d.data}" download="${d.name}">Download</a>
+                <button class="btn danger" data-id="${d.id}">Remove</button>
+              </div>
+            </div>`).join('') || '<div class="subtle">No documents uploaded.</div>';
+          box.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const P = state.profiles[user.id]; P.documents = P.documents.filter(x=>x.id!==b.dataset.id); save(); drawDocs(); });
+        }
+        drawDocs();
+      }
+    };
+
+    // ----- Admin profile drawer
+    function openProfileAdmin(staffId){
+      const p = state.profiles[staffId] || { info:{}, performance:{points:0}, rewards:[], documents:[] };
+      const s = state.staff.find(x=>x.id===staffId);
+      const info = p.info || {};
+      const workedTotal = Array.from(new Set(state.sessions.filter(x=>x.staffId===staffId).map(x=>x.date))).reduce((acc,d)=> acc+dayWorkedMinutes(staffId,d),0);
+      const host = document.createElement('div');
+      host.className='card';
+      host.innerHTML = `
+        <h3>${s?.name||staffId} — Profile</h3>
+        <div class="kpis" style="margin-bottom:10px">
+          <div class="kpi"><div class="value">${fmtDate(info.joinDate)}</div><div class="subtle">Joined</div></div>
+          <div class="kpi"><div class="value">${minToHHMM(workedTotal)}</div><div class="subtle">Total Worked</div></div>
+          <div class="kpi"><div class="value">${p.performance?.points||0}</div><div class="subtle">Points</div></div>
+          <div class="kpi"><div class="value">${p.rewards.length}</div><div class="subtle">Rewards</div></div>
+        </div>
+        <div class="row cols-3">
+          <div><label>Full Name</label><input id="ap-name" value="${info.fullName||''}"></div>
+          <div><label>ID No</label><input id="ap-idno" value="${info.idNo||''}"></div>
+          <div><label>DOB</label><input id="ap-dob" type="date" value="${info.dob||''}"></div>
+          <div><label>Phone</label><input id="ap-phone" value="${info.phone||''}"></div>
+          <div><label>Email</label><input id="ap-email" value="${info.email||''}"></div>
+          <div><label>Joined</label><input id="ap-join" type="date" value="${info.joinDate||''}"></div>
+          <div class="row cols-1"><label>Address</label><textarea id="ap-address" rows="2">${info.address||''}</textarea></div>
+          <div class="row cols-1"><label>Qualifications</label><input id="ap-qual" value="${info.qualifications||''}"></div>
+          <div class="row cols-1"><label>Remarks</label><textarea id="ap-remarks" rows="2">${info.remarks||''}</textarea></div>
+        </div>
+        <div style="margin-top:10px"><button id="ap-save" class="btn primary">Save</button></div>
+        <div class="card" style="margin-top:10px">
+          <h4>Rewards</h4>
+          <div class="row cols-3">
+            <div><label>Date</label><input id="rw-date" type="date" value="${today()}"></div>
+            <div><label>Points</label><input id="rw-points" type="number" value="10"></div>
+            <div><label>Reason</label><input id="rw-reason" placeholder="Attended event"></div>
+          </div>
+          <div style="margin-top:8px"><button id="rw-add" class="btn">Add Reward</button></div>
+          <div style="max-height:260px;overflow:auto;margin-top:8px">
+            <table><thead><tr><th>Date</th><th>Points</th><th>Reason</th><th></th></tr></thead><tbody id="rw-tb"></tbody></table>
+          </div>
+        </div>
+      `;
+      const view = document.getElementById('v-Staff'); view.innerHTML=''; view.appendChild(host);
+      host.querySelector('#ap-save').onclick=()=>{
+        const P = state.profiles[staffId] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+        const I = P.info;
+        I.fullName = host.querySelector('#ap-name').value;
+        I.idNo = host.querySelector('#ap-idno').value;
+        I.dob = host.querySelector('#ap-dob').value;
+        I.phone = host.querySelector('#ap-phone').value;
+        I.email = host.querySelector('#ap-email').value;
+        I.joinDate = host.querySelector('#ap-join').value;
+        I.address = host.querySelector('#ap-address').value;
+        I.qualifications = host.querySelector('#ap-qual').value;
+        I.remarks = host.querySelector('#ap-remarks').value;
+        save(); alert('Profile saved.');
+      };
+      host.querySelector('#rw-add').onclick=()=>{
+        const P = state.profiles[staffId] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+        const pts = Number(host.querySelector('#rw-points').value)||0;
+        const rec = { date:host.querySelector('#rw-date').value, points:pts, reason:host.querySelector('#rw-reason').value };
+        P.rewards.unshift(rec);
+        P.performance.points = (P.performance.points||0)+pts;
+        save(); drawRw();
+      };
+      function drawRw(){
+        const P = state.profiles[staffId]||{rewards:[]};
+        const tb = host.querySelector('#rw-tb');
+        tb.innerHTML = (P.rewards||[]).map((r,i)=>`<tr><td>${fmtDate(r.date)}</td><td>${r.points}</td><td>${r.reason||''}</td><td><button class="btn danger" data-i="${i}">Remove</button></td></tr>`).join('') || `<tr><td colspan="4" class="subtle">No rewards.</td></tr>`;
+        tb.querySelectorAll('button[data-i]').forEach(b=> b.onclick = ()=>{ const i = Number(b.dataset.i); P.rewards.splice(i,1); save(); drawRw(); });
+      }
+      drawRw();
+    }
+
+    // ----- Events
+    function setupEvents(){
+      DOM.frm.addEventListener('submit', handleLogin);
+      DOM.logout.onclick = ()=>{ user=null; worksite=''; DOM.app.classList.add('hidden'); DOM.login.classList.remove('hidden'); };
+      DOM.sync.onclick = syncToWebhook;
+      DOM.load.onclick = async ()=>{ const ok = await fetchCloudState(); alert(ok?'Loaded ✓':'Load failed'); };
+      DOM.test.onclick = testWebhook;
+    }
+
+    // ----- Boot
+    async function main(){
+      load();
+      populateCentres();
+      setupEvents();
+      // Cloud-first refresh so new staff can login on any device
+      if(state.settings?.webhook){ await fetchCloudState(); }
+    }
+    document.addEventListener('DOMContentLoaded', main);
+  })();
+  </script>
 </body>
 </html>
