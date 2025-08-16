@@ -1,620 +1,1135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>MLS DAILY</title>
-  <meta name="theme-color" content="#2ecc71" />
-  <style>
-    :root{
-      --green:#2ecc71;--green-dark:#27ae60;--dark-bg:#121212;--dark-card:#1d1d1d;--dark-border:#2a2a2a;--dark-text:#eeeeee;--dark-subtle:#9aa0a6;
-      --light-bg:#f6f9fc;--light-card:#ffffff;--light-border:#e6ecf1;--light-text:#1f2937;--light-subtle:#6b7280;
-      --red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;--orange:#f97316;--purple:#8b5cf6;
-      --radius:12px;--space:16px;--shadow:0 8px 24px rgba(0,0,0,.08);
-    }
-    .dark{--bg:var(--dark-bg);--card:var(--dark-card);--border:var(--dark-border);--text:var(--dark-text);--muted:var(--dark-subtle);--elev:rgba(0,0,0,.35)}
-    .light{--bg:var(--light-bg);--card:var(--light-card);--border:var(--light-border);--text:var(--light-text);--muted:var(--light-subtle);--elev:rgba(0,0,0,.08)}
-    *{box-sizing:border-box} html{scroll-behavior:smooth}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-    .app{display:none}
-    .hidden{display:none!important}
-    header.sticky{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--border);box-shadow:0 4px 16px var(--elev);padding:10px var(--space);display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .brand{font-weight:800;letter-spacing:.2px}.brand b{color:var(--green)}
-    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.85rem;color:#fff}
-    .admin{background:var(--blue)} .staff{background:var(--green)} .logout{background:var(--red);cursor:pointer}
-    .loc-pill{font-size:.85rem;color:var(--muted)}
-    nav.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px var(--space);border-bottom:1px solid var(--border)}
-    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:#fff;font-weight:700;cursor:pointer;transition:transform .05s ease;white-space:nowrap}
-    .btn:active{transform:translateY(1px)}
-    .btn.secondary{background:var(--muted);color:#fff}
-    .btn.danger{background:var(--red)}
-    .btn.tab{background:var(--muted)} .btn.tab.active{background:var(--green)}
-    main{padding:var(--space)}
-    .view{display:none;animation:fade .25s ease} .view.active{display:block}
-    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--space);margin-bottom:var(--space)}
-    h3{margin:0 0 8px 0;padding-bottom:8px;border-bottom:1px solid var(--border)}
-    .grid{display:grid;gap:var(--space)} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
-    @media (max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
-    input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
-    input[type="password"]{letter-spacing:0.2em}
-    label{font-weight:700;font-size:.9rem;margin-bottom:6px;display:block}
-    .note{color:var(--muted);font-size:.9rem}
-    .table{max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:12px}
-    table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
-    thead th{position:sticky;top:0;background:var(--card);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
-    .chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.8rem;color:#fff}
-    .Pending{background:var(--yellow);color:#111} .Approved{background:var(--green)} .Rejected{background:var(--red)}
-    .Late{background:var(--orange)} .Early{background:var(--purple)} .Overtime{background:var(--blue)}
-    /* Login */
-    #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-    .login-box{max-width:420px;width:100%}
-    /* Drawer */
-    #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:.2s;z-index:1050}
-    #drawer{position:fixed;top:0;right:-560px;width:90%;max-width:560px;height:100%;background:var(--card);border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.25);transition:.3s;z-index:1100;display:flex;flex-direction:column}
-    #overlay.show{opacity:1;visibility:visible} #drawer.show{right:0}
-    .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:12px var(--space);border-bottom:1px solid var(--border)}
-    /* Sticky mobile actions */
-    .dock{position:sticky;bottom:0;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:10px;display:flex;gap:8px;box-shadow:0 -6px 24px var(--elev)}
-    @media (max-width:640px){.dock .btn{flex:1}}
-  </style>
+<meta charset="utf-8">
+<title>MLS DAILY</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+:root{
+  --bg:#0f1115;--card:#171a21;--line:#2a2f3a;--text:#e6e6ea;--muted:#a6adbb;
+  --accent:#2ecc71;--accent-d:#27ae60;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --radius:12px;--shadow:0 10px 25px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+.hidden{display:none!important}
+.container{max-width:1200px;margin:0 auto;padding:16px}
+header.sticky{position:sticky;top:0;z-index:30;background:rgba(23,26,33,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header .bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
+.brand{font-weight:800;letter-spacing:.3px}
+.brand .accent{color:var(--accent)}
+.badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:600;background:#10131a}
+.badge.admin{border-color:rgba(59,130,246,.35);color:#93c5fd}
+.badge.staff{border-color:rgba(16,185,129,.35);color:#6ee7b7}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#10131a;color:var(--text);cursor:pointer;transition:.15s all}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn.primary{background:var(--accent);border-color:transparent;color:#08140d}
+.btn.danger{background:var(--red);border-color:transparent}
+.btn.small{padding:6px 10px;border-radius:8px;font-size:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.tabs .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#111520;color:var(--muted);cursor:pointer}
+.tabs .tab.active{background:var(--accent);color:#0b1510;border-color:transparent}
+.grid{display:grid;gap:16px}
+.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.grid.cols-3{grid-template-columns:1fr}.grid.cols-2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card .head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.card .body{padding:14px 16px}
+.input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#10131a;color:var(--text)}
+label{display:block;font-weight:600;margin:8px 0 6px}
+.table-wrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:#111520;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi .item{padding:14px;border:1px solid var(--line);border-radius:12px;background:#10131a;text-align:center}
+.kpi .value{font-size:22px;font-weight:800;color:var(--accent)}
+.kpi .label{color:var(--muted);font-size:12px}
+.chip{padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#10131a}
+.chip.ok{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35);color:#a7f3d0}
+.chip.warn{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.35);color:#fde68a}
+.chip.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#fecaca}
+footer{padding:30px 16px;color:var(--muted);text-align:center}
+.view{display:none}
+.view.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{max-width:420px;width:100%}
+.err{color:#fca5a5;min-height:18px;margin-top:6px}
+.row{display:flex;gap:10px;align-items:center}
+.row > * {flex:1}
+.small{font-size:12px;color:var(--muted)}
+.tag{display:inline-block;margin-right:8px;color:#9ca3af}
+</style>
 </head>
-<body class="light">
-  <section id="login">
-    <div class="login-box card">
-      <h2 class="brand">MLS <b>DAILY</b></h2>
-      <p class="note">Enter your PIN and select your location.</p>
-      <form id="login-form" autocomplete="off" novalidate>
-        <div>
-          <label for="pin">PIN</label>
-          <input id="pin" type="password" inputmode="numeric" maxlength="6" enterkeyhint="go" autocomplete="off" placeholder="4–6 digits" required />
+<body>
+<section id="login" class="login-wrap">
+  <div class="card login-card">
+    <div class="head">
+      <div class="brand">MLS <span class="accent">DAILY</span></div>
+      <div class="small">Single-File • Offline-first</div>
+    </div>
+    <div class="body">
+      <form id="login-form">
+        <label>Centre (optional)</label>
+        <select id="site" class="input"></select>
+        <label>PIN</label>
+        <input id="pin" class="input" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="e.g., 1001" maxlength="8">
+        <div id="err" class="err"></div>
+        <button class="btn primary" style="width:100%">Login</button>
+        <div class="row" style="margin-top:8px">
+          <button type="button" id="admin-safe" class="btn">Admin Safe Entry</button>
+          <button type="button" id="reset-app" class="btn danger">Reset App Data</button>
         </div>
-        <div>
-          <label for="site">Worksite</label>
-          <select id="site" required>
-            <option value="">Select location…</option>
-            <option>MLS - Colombo 4</option>
-            <option>Finnish Preschool - Park Road</option>
-            <option>Forest School - Piliyandala</option>
-            <option>SenSoMo - One Galle Face</option>
-            <option>Forest School - Cape Weligama</option>
-          </select>
-        </div>
-        <button class="btn" style="width:100%;margin-top:8px">Login</button>
       </form>
-      <p class="note" style="margin-top:8px">If allowed, geolocation is stored with your login.</p>
-      <p id="login-error" style="color:var(--red);min-height:1.25rem;margin:6px 0 0 0"></p>
-    </div>
-  </section>
-
-  <section id="app" class="app">
-    <header class="sticky">
-      <div class="brand">MLS <b>DAILY</b></div>
-      <div class="actions">
-        <span id="badge" class="badge staff"></span>
-        <span id="loc" class="loc-pill"></span>
-        <button id="sync" class="btn secondary">Sync → Webhook</button>
-        <button id="loadCloud" class="btn secondary" title="Fetch state from webhook (GET)">Load from Webhook</button>
-        <label style="display:flex;align-items:center;gap:6px">
-          <input id="theme" type="checkbox" onchange="document.body.className=this.checked?'dark':'light'">
-          <span class="note">Dark</span>
-        </label>
-        <span id="logout" class="badge logout">Logout</span>
+      <div class="small" style="margin-top:10px">
+        Tip: Admin <span class="tag">0000</span> • Staff <span class="tag">1001</span> <span class="tag">1002</span>
       </div>
-    </header>
-    <nav id="tabs" class="tabs"></nav>
-    <main id="main"></main>
-  </section>
-
-  <div id="overlay"></div>
-  <aside id="drawer">
-    <div class="drawer-head">
-      <strong id="drawer-title">Details</strong>
-      <button id="drawer-close" class="btn danger" style="padding:6px 10px">Close</button>
     </div>
-    <div id="drawer-body" style="padding:var(--space);overflow:auto"></div>
-  </aside>
+  </div>
+</section>
 
-  <script>
-  (function(){
-    'use strict';
-    const KEY='mls_daily_state_v2';
-    const LOCS=['MLS - Colombo 4','Finnish Preschool - Park Road','Forest School - Piliyandala','SenSoMo - One Galle Face','Forest School - Cape Weligama'];
-    const DOM={
-      app:document.getElementById('app'), login:document.getElementById('login'),
-      frm:document.getElementById('login-form'), pin:document.getElementById('pin'), site:document.getElementById('site'), err:document.getElementById('login-error'),
-      tabs:document.getElementById('tabs'), main:document.getElementById('main'),
-      badge:document.getElementById('badge'), loc:document.getElementById('loc'),
-      logout:document.getElementById('logout'), sync:document.getElementById('sync'), loadCloud:document.getElementById('loadCloud'),
-      overlay:document.getElementById('overlay'), drawer:document.getElementById('drawer'), dtitle:document.getElementById('drawer-title'), dbody:document.getElementById('drawer-body'), dclose:document.getElementById('drawer-close'),
-      theme:document.getElementById('theme')
+<section id="app" class="hidden">
+  <header class="sticky">
+    <div class="bar container">
+      <div class="brand">MLS <span class="accent">DAILY</span></div>
+      <div id="who" class="badge">—</div>
+      <div class="row" style="gap:8px;flex:0 0 auto">
+        <button id="load-cloud" class="btn small">Load from Webhook</button>
+        <button id="sync" class="btn small">Sync → Webhook</button>
+        <button id="logout" class="btn small">Logout</button>
+      </div>
+    </div>
+    <div class="tabs container" id="tabs"></div>
+  </header>
+  <main class="container" id="main"></main>
+</section>
+
+<!-- Drawer -->
+<div id="overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50"></div>
+<aside id="drawer" class="hidden" style="position:fixed;right:0;top:0;height:100%;width:420px;max-width:96%;background:var(--card);border-left:1px solid var(--line);z-index:60;box-shadow:var(--shadow)">
+  <div class="head" style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 14px">
+    <b id="drawer-title">Details</b>
+    <button id="drawer-close" class="btn small">Close</button>
+  </div>
+  <div id="drawer-body" style="padding:14px;overflow:auto;height:calc(100% - 54px)"></div>
+</aside>
+
+<script>
+(() => {
+  'use strict';
+
+  // ===== A. DOM & UTILS =====
+  const DOM = {
+    login: document.getElementById('login'),
+    app: document.getElementById('app'),
+    tabs: document.getElementById('tabs'),
+    main: document.getElementById('main'),
+    who: document.getElementById('who'),
+    site: document.getElementById('site'),
+    pin: document.getElementById('pin'),
+    err: document.getElementById('err'),
+    frm: document.getElementById('login-form'),
+    logout: document.getElementById('logout'),
+    sync: document.getElementById('sync'),
+    loadCloud: document.getElementById('load-cloud'),
+    overlay: document.getElementById('overlay'),
+    drawer: document.getElementById('drawer'),
+    dtitle: document.getElementById('drawer-title'),
+    dbody: document.getElementById('drawer-body'),
+    dclose: document.getElementById('drawer-close'),
+    adminSafe: document.getElementById('admin-safe'),
+    resetApp: document.getElementById('reset-app'),
+  };
+
+  const KEY = 'MLS_DAILY_STATE_V3';
+
+  const id = () => crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+
+  const fmtDate = s => !s ? '' : new Date(s).toLocaleDateString('en-CA');
+  const fmtDateTime = s => !s ? '' : new Date(s).toLocaleString();
+  const today = () => new Date().toISOString().slice(0,10);
+  const startOfMonth = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10);
+  const hhmmToMin = t => !t || !t.includes(':') ? 0 : (t.split(':')[0]*60 + (+t.split(':')[1]));
+  const minToHHMM = m => {
+    m = Math.max(0, Math.round(m||0));
+    const h = Math.floor(m/60), mm = m%60; return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  };
+
+  const centresList = [
+    'MLS - Colombo 4',
+    'Finnish Preschool - Park Road',
+    'Forest School - Piliyandala',
+    'SenSoMo - One Galle Face',
+    'Forest School - Cape Weligama'
+  ];
+
+  // ===== B. STATE (offline-first) =====
+  let S = null;  // state
+  let user = null;
+  let worksite = '';
+
+  function seed() {
+    S = {
+      _seeded: true,
+      schema: 3,
+      settings: {
+        org: 'MLS Innovations',
+        centres: centresList.slice(),
+        breakMins: 30,
+        targetMins: 480,
+        halfDayMins: 240,
+        webhook: '' // set in Settings
+      },
+      staff: [
+        { id: '1001', name: 'John Doe', role: 'Developer', pin: '1001', active: true, defaultWorksite: centresList[0], joinDate: '2023-01-10' },
+        { id: '1002', name: 'Jane Smith', role: 'Designer', pin: '1002', active: true, defaultWorksite: centresList[1], joinDate: '2023-03-15' },
+      ],
+      profiles: {
+        '1001': { info:{phone:'0771234567', email:'john.d@example.com'}, docs:[], performance:{points:120}, rewards:[] },
+        '1002': { info:{phone:'0719876543', email:'jane.s@example.com'}, docs:[], performance:{points:65}, rewards:[] },
+      },
+      sessions: [
+        { id:id(), staffId:'1001', date: today(), clockIn:'09:00', clockOut:'17:30', centre: centresList[0] },
+        { id:id(), staffId:'1002', date: today(), clockIn:'09:15', clockOut:'17:45', centre: centresList[1] },
+      ],
+      breaks: [],
+      leaves: [
+        { id:id(), staffId:'1002', type:'Short', date: today(), minutes:60, reason:'Errand', status:'Pending', createdAt:new Date().toISOString() }
+      ],
+      holidays: [ { date:'2025-08-20', title:'Poya Day' } ],
+      inbox: [],
+      salaryRequests: [],
+      shifts: [],
+      notices: [{ id:id(), title:'Welcome!', body:'Please clock-in when you arrive and check the Shift Planner.', centre:'All', createdAt:new Date().toISOString() }],
+      logins: []
     };
-    const TABS={
-      Admin:['Today','Attendance','Leaves','Holidays','Inbox','Staff','Rewards','Shift Planner','Notice Board','Settings','Export','Payroll'],
-      Staff:['My Dashboard','My Leaves','My Requests','My Profile','Notice Board','Company Holidays']
+    save();
+  }
+
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ console.error(e); } }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw){ seed(); return; }
+      const obj = JSON.parse(raw);
+      if(!obj || typeof obj!=='object'){ seed(); return; }
+      if(!obj.settings || !Array.isArray(obj.staff)){ seed(); return; }
+      // coerce pins to strings
+      obj.staff.forEach(s => { if(s && s.pin!=null) s.pin = String(s.pin); });
+      S = obj;
+    }catch(e){ console.error('load error', e); seed(); }
+  }
+
+  // ===== C. AUTH =====
+  function matchPIN(p){
+    const pin = String(p||'').normalize('NFKC').replace(/\D+/g,'');
+    if(pin==='0000') return { id:'admin', name:'Admin', role:'Admin', active:true };
+    for(const s of (S.staff||[])){
+      const sp = String(s.pin||'').normalize('NFKC').replace(/\D+/g,'');
+      if(sp===pin && s.active!==false) return { id:s.id, name:s.name, role:'Staff', active:true };
+    }
+    return null;
+  }
+
+  async function fetchCloudState(){
+    const url = S?.settings?.webhook;
+    if(!url) return null;
+    try{
+      const r = await fetch(url, { method:'GET' });
+      if(!r.ok) throw new Error(r.status+' '+r.statusText);
+      const data = await r.json();
+      if(data && typeof data==='object'){
+        S = data; save(); return S;
+      }
+    }catch(e){ console.warn('cloud load failed', e); }
+    return null;
+  }
+
+  // ===== D. ROUTER =====
+  const V = {}; // view renderers
+  function show(name){
+    try{
+      // activate tab
+      [...document.querySelectorAll('.tabs .tab')].forEach(b => b.classList.toggle('active', b.dataset.v===name));
+      const idc = 'view-'+name.replace(/\s+/g,'');
+      let el = document.getElementById(idc);
+      if(!el){ el = document.createElement('section'); el.id = idc; el.className='view'; DOM.main.appendChild(el); }
+      [...document.querySelectorAll('.view')].forEach(v => v.classList.remove('active'));
+      el.classList.add('active');
+
+      // resolve renderer
+      const keys = [
+        'render_'+name.replace(/\s+/g,'_'),
+        'render_'+name.replace(/\s+/g,'')
+      ];
+      for(const k of keys){
+        if(typeof V[k]==='function'){ V[k](el); return; }
+      }
+      el.innerHTML = '<div class="card"><div class="body">View not found: '+name+'</div></div>';
+    }catch(err){
+      console.error(err);
+      alert('Render error in '+name+': '+(err.message||err));
+    }
+  }
+
+  function openDrawer(title, html){
+    DOM.dtitle.textContent = title;
+    DOM.dbody.innerHTML = html;
+    DOM.overlay.classList.remove('hidden');
+    DOM.drawer.classList.remove('hidden');
+  }
+  function closeDrawer(){
+    DOM.overlay.classList.add('hidden');
+    DOM.drawer.classList.add('hidden');
+    DOM.dbody.innerHTML='';
+  }
+
+  // ===== E. CALC =====
+  function workedMinutes(staffId, date){
+    const sessions = S.sessions.filter(s => s.staffId===staffId && s.date===date);
+    const leaves = S.leaves.filter(l => l.staffId===staffId && l.date===date && l.status==='Approved');
+    if(leaves.some(l => l.type==='Full')) return 0;
+    let total = 0;
+    for(const s of sessions){ total += Math.max(0, hhmmToMin(s.clockOut) - hhmmToMin(s.clockIn)); }
+    if(total<=0) return 0;
+    let worked = total - S.settings.breakMins;
+    const shortMins = leaves.filter(l => l.type==='Short').reduce((a,b)=>a+(+b.minutes||0),0);
+    worked -= shortMins;
+    if(leaves.some(l => l.type==='Half')) worked = Math.min(worked, S.settings.halfDayMins);
+    return Math.max(0, worked);
+  }
+
+  // ===== F. RENDERERS =====
+  function renderHeader(){
+    const role = user?.role || '—';
+    DOM.who.className = 'badge ' + (role==='Admin'?'admin':'staff');
+    DOM.who.textContent = (role==='Admin'?'Admin':'Staff — '+user.name) + (worksite?(' @ '+worksite):'');
+  }
+  function renderTabs(){
+    const tabs = (user.role==='Admin')
+      ? ['Today','Attendance','Shift Planner','Staff','Leaves','Holidays','Inbox','Rewards','Settings','Export','Notice Board','Payroll']
+      : ['My Dashboard','Clock','My Leaves','My Requests','Company Holidays','Notice Board','My Profile'];
+    DOM.tabs.innerHTML = tabs.map(t => '<button class="tab'+(t===tabs[0]?' active':'')+' btn" data-v="'+t+'">'+t+'</button>').join('');
+    DOM.tabs.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.v));
+  }
+
+  // --- Admin: Today
+  V.render_Today = el => {
+    const centres = ['All'].concat(S.settings.centres||[]);
+    const rows = [];
+    const d = today();
+    for(const s of S.staff){
+      // find if worked today
+      const sess = S.sessions.filter(x => x.staffId===s.id && x.date===d);
+      if(sess.length){
+        const centre = sess[0].centre || (s.defaultWorksite||'');
+        rows.push({ name:s.name, centre, clockIn: sess[0].clockIn, clockOut: sess[0].clockOut });
+      }
+    }
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="head"><b>Who’s In Today</b>
+            <select id="flt-centre" class="input" style="max-width:240px">
+              ${centres.map(c=>`<option>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Name</th><th>Centre</th><th>Clock In</th><th>Clock Out</th></tr></thead>
+              <tbody id="today-body">
+                ${rows.map(r=>`<tr><td>${r.name}</td><td>${r.centre}</td><td>${r.clockIn||''}</td><td>${r.clockOut||''}</td></tr>`).join('') || `<tr><td colspan="4">No one has clocked in yet.</td></tr>`}
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="head"><b>Notice Board</b></div>
+          <div class="body" id="nb-list">
+            ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
+              <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+                <div class="row" style="justify-content:space-between">
+                  <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
+                </div>
+                <div style="margin-top:6px">${n.body}</div>
+              </div>
+            `).join('') || '<div class="small">No notices yet.</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+    const select = el.querySelector('#flt-centre');
+    select.onchange = () => {
+      const c = select.value;
+      const body = el.querySelector('#today-body');
+      const filtered = (c==='All') ? rows : rows.filter(r => r.centre===c);
+      body.innerHTML = filtered.map(r=>`<tr><td>${r.name}</td><td>${r.centre}</td><td>${r.clockIn||''}</td><td>${r.clockOut||''}</td></tr>`).join('') || `<tr><td colspan="4">No one at ${c} today.</td></tr>`;
     };
-    let S={}, user=null, worksite=null;
+  };
 
-    // Utils
-    const id=()=>crypto?.randomUUID?.()||('id_'+Date.now()+'_'+Math.random().toString(36).slice(2,9));
-    const today=()=>new Date().toISOString().split('T')[0];
-    const now=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
-    const toMin=t=>{if(!t||!t.includes(':'))return 0; const [h,m]=t.split(':').map(Number); return h*60+m;};
-    const hhmm=m=>{if(!m||m<0)return '00:00'; const h=Math.floor(m/60), mm=Math.round(m%60); return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');};
-    const fmt=d=>new Date(d).toLocaleDateString('en-CA'); const fmtDT=d=>new Date(d).toLocaleString();
+  // --- Admin: Attendance
+  V.render_Attendance = el => {
+    const optionsStaff = ['All'].concat(S.staff.map(x=>x.name));
+    el.innerHTML = `
+      <div class="card">
+        <div class="head"><b>Attendance Log</b></div>
+        <div class="body">
+          <div class="grid cols-3">
+            <div><label>Start</label><input id="a-start" class="input" type="date" value="${startOfMonth()}"></div>
+            <div><label>End</label><input id="a-end" class="input" type="date" value="${today()}"></div>
+            <div><label>Staff</label>
+              <select id="a-staff" class="input">${optionsStaff.map(n=>`<option>${n}</option>`).join('')}</select>
+            </div>
+            <div><label>Centre</label>
+              <select id="a-centre" class="input"><option>All</option>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
+            </div>
+            <div style="align-self:end"><button id="a-run" class="btn primary" style="width:100%">Run</button></div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px"><table>
+            <thead><tr><th>Staff</th><th>Date</th><th>Centre</th><th>Worked (mins)</th><th>Worked (hh:mm)</th></tr></thead>
+            <tbody id="a-body"><tr><td colspan="5">Set filters then Run.</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    `;
+    el.querySelector('#a-run').onclick = () => {
+      const s = el.querySelector('#a-start').value;
+      const e = el.querySelector('#a-end').value;
+      const stf = el.querySelector('#a-staff').value;
+      const cen = el.querySelector('#a-centre').value;
+      const tbody = el.querySelector('#a-body');
+      const seen = new Map();
+      for(const sess of S.sessions){
+        const nm = (S.staff.find(x=>x.id===sess.staffId)?.name)||'Unknown';
+        if(sess.date < s || sess.date > e) continue;
+        if(stf!=='All' && nm!==stf) continue;
+        if(cen!=='All' && (sess.centre||'')!==cen) continue;
+        const key = sess.staffId+'|'+sess.date+'|'+(sess.centre||'');
+        seen.set(key, {staffId:sess.staffId, name:nm, date:sess.date, centre: (sess.centre||'' )});
+      }
+      const rows = [...seen.values()].sort((a,b)=> b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="5">No records.</td></tr>`; return; }
+      tbody.innerHTML = rows.map(r=>{
+        const mins = workedMinutes(r.staffId, r.date);
+        return `<tr><td>${r.name}</td><td>${fmtDate(r.date)}</td><td>${r.centre}</td><td>${mins}</td><td>${minToHHMM(mins)}</td></tr>`;
+      }).join('');
+    };
+  };
 
-    // State
-    function load(){try{const j=localStorage.getItem(KEY); if(j) S=JSON.parse(j); else seed();}catch{seed();}}
-    function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){alert('Storage error: '+e.message);}}
-    function seed(){
-      S={ settings:{org:'MLS Innovations',breakMins:30,targetMins:480,halfDayMins:240,workdayStart:'09:00',workdayEnd:'17:30',payPeriodStart:'2025-08-01',payPeriodEnd:'2025-08-31',webhook:'',rewardPoints:{holiday:5,overtimePerHour:1,eventDefault:10}},
-          staff:[{id:'1001',name:'John Doe',role:'Developer',pin:'1001',active:true,defaultWorksite:LOCS[0]},{id:'1002',name:'Jane Smith',role:'Designer',pin:'1002',active:true,defaultWorksite:LOCS[1]},{id:'1003',name:'Peter Jones',role:'QA Engineer',pin:'1003',active:false,defaultWorksite:LOCS[2]}],
-          profiles:{ '1001':{info:{fullName:'Johnathan Doe',email:'john.d@example.com',phone:'0771234567',address:'123 Main St, Colombo',idNo:'901234567V',dob:'1990-05-15',qualifications:'BSc in CS',joinDate:'2023-01-10',remarks:'Team lead for Project X'},attachments:[],performance:{points:120},pthist:[]},
-                     '1002':{info:{fullName:'Jane A. Smith',email:'jane.s@example.com',phone:'0719876543',address:'456 Galle Rd, Dehiwala',idNo:'927654321V',dob:'1992-11-20',qualifications:'BA in Design',joinDate:'2023-03-15',remarks:''},attachments:[],performance:{points:65},pthist:[]}},
-          sessions:[{id:id(),staffId:'1001',date:'2025-08-11',clockIn:'09:01',clockOut:'17:35',breaks:[{start:'13:00',end:'13:30'}],location:LOCS[0]},{id:id(),staffId:'1002',date:'2025-08-11',clockIn:'09:15',clockOut:'17:45',breaks:[{start:'13:05',end:'13:35'}],location:LOCS[1]}],
-          live:{}, leaves:[{id:id(),staffId:'1001',type:'Half',date:'2025-08-12',minutes:240,reason:'Doctor appointment',status:'Approved',createdAt:new Date().toISOString()}],
-          holidays:[{date:'2025-08-20',title:'Poya Day'}], inbox:[], rewards:[], shifts:[], logins:[], notices:[] };
-      save();
+  // --- Admin: Shift Planner
+  V.render_Shift_Planner = el => {
+    const optionsStaff = S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    const optionsCentre = (S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('');
+    const list = (S.shifts||[]).slice().sort((a,b)=> (a.date+b.start).localeCompare(b.date+b.start));
+    el.innerHTML = `
+      <div class="card">
+        <div class="head"><b>Shift Planner</b></div>
+        <div class="body">
+          <form id="f-shift" class="grid cols-3">
+            <div><label>Date</label><input id="sh-date" type="date" class="input" value="${today()}" required></div>
+            <div><label>Centre</label><select id="sh-centre" class="input">${optionsCentre}</select></div>
+            <div><label>Staff</label><select id="sh-staff" class="input">${optionsStaff}</select></div>
+            <div><label>Start</label><input id="sh-start" type="time" class="input" value="09:00"></div>
+            <div><label>End</label><input id="sh-end" type="time" class="input" value="17:00"></div>
+            <div><label>Notes</label><input id="sh-notes" class="input" placeholder="Optional"></div>
+            <div style="align-self:end"><button class="btn primary" style="width:100%">Add Shift</button></div>
+          </form>
+          <div class="table-wrap" style="margin-top:12px"><table>
+            <thead><tr><th>Date</th><th>Centre</th><th>Staff</th><th>Start</th><th>End</th><th></th></tr></thead>
+            <tbody id="sh-body">
+              ${list.map(s=>`<tr data-id="${s.id}"><td>${fmtDate(s.date)}</td><td>${s.centre}</td><td>${S.staff.find(x=>x.id===s.staffId)?.name||'-'}</td><td>${s.start}</td><td>${s.end}</td><td><button class="btn small danger" data-del="${s.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="6">No shifts yet.</td></tr>`}
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    `;
+    el.querySelector('#f-shift').onsubmit = e => {
+      e.preventDefault();
+      const sh = {
+        id: id(),
+        date: el.querySelector('#sh-date').value,
+        centre: el.querySelector('#sh-centre').value,
+        staffId: el.querySelector('#sh-staff').value,
+        start: el.querySelector('#sh-start').value,
+        end: el.querySelector('#sh-end').value,
+        notes: el.querySelector('#sh-notes').value
+      };
+      (S.shifts ||= []).push(sh); save(); show('Shift Planner');
+    };
+    el.querySelectorAll('[data-del]').forEach(btn => btn.onclick = () => {
+      const rid = btn.getAttribute('data-del');
+      S.shifts = (S.shifts||[]).filter(x=>x.id!==rid); save(); show('Shift Planner');
+    });
+  };
+
+  // --- Admin: Staff
+  V.render_Staff = el => {
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="head"><b>Add Staff</b></div>
+          <div class="body">
+            <form id="f-add">
+              <label>ID</label><input id="st-id" class="input" required>
+              <label>Name</label><input id="st-name" class="input" required>
+              <label>Role</label><input id="st-role" class="input" required>
+              <label>PIN (4 digits)</label><input id="st-pin" class="input" inputmode="numeric" maxlength="6" placeholder="e.g., 1234" required>
+              <label>Default Centre</label>
+              <select id="st-centre" class="input">${(S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('')}</select>
+              <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
+            </form>
+          </div>
+        </div>
+        <div class="card">
+          <div class="head"><b>Manage Staff</b></div>
+          <div class="body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Centre</th><th>Status</th><th></th></tr></thead>
+              <tbody id="st-body">
+                ${S.staff.map(s=>`
+                  <tr>
+                    <td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td>
+                    <td>${s.active!==false?'<span class="chip ok">Active</span>':'<span class="chip err">Inactive</span>'}</td>
+                    <td>
+                      <button class="btn small" data-toggle="${s.id}">${s.active!==false?'Deactivate':'Activate'}</button>
+                      <button class="btn small danger" data-remove="${s.id}">Remove</button>
+                      <button class="btn small" data-profile="${s.id}">Profile</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    `;
+    el.querySelector('#f-add').onsubmit = e => {
+      e.preventDefault();
+      const st = {
+        id: el.querySelector('#st-id').value.trim(),
+        name: el.querySelector('#st-name').value.trim(),
+        role: el.querySelector('#st-role').value.trim(),
+        pin: String(el.querySelector('#st-pin').value||'').replace(/\D+/g,''),
+        active: true,
+        defaultWorksite: el.querySelector('#st-centre').value,
+        joinDate: today()
+      };
+      if(!st.id || S.staff.find(x=>x.id===st.id)){ return alert('ID exists.'); }
+      (S.staff ||= []).push(st);
+      (S.profiles ||= {}); S.profiles[st.id] = {info:{},docs:[],performance:{points:0},rewards:[]};
+      save(); show('Staff');
+    };
+    el.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => {
+      const idd = b.getAttribute('data-toggle');
+      const i = S.staff.findIndex(x=>x.id===idd); if(i<0) return;
+      S.staff[i].active = !(S.staff[i].active!==false); save(); show('Staff');
+    });
+    el.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+      const idd = b.getAttribute('data-remove');
+      if(!confirm('Remove staff '+idd+'?')) return;
+      S.staff = S.staff.filter(x=>x.id!==idd); save(); show('Staff');
+    });
+    el.querySelectorAll('[data-profile]').forEach(b => b.onclick = () => openProfile(b.getAttribute('data-profile')));
+  };
+
+  function openProfile(staffId){
+    const st = S.staff.find(x=>x.id===staffId);
+    const pf = (S.profiles||{})[staffId] || {info:{},docs:[],performance:{points:0},rewards:[]};
+    const totalDays = S.sessions.filter(s=>s.staffId===staffId).length;
+    const totalMins = S.sessions.filter(s=>s.staffId===staffId).reduce((a,s)=>a+workedMinutes(staffId, s.date),0);
+    const joined = st?.joinDate || '—';
+    openDrawer(st?.name||staffId, `
+      <div class="small">Joined: ${fmtDate(joined)} • Sessions: ${totalDays} • Worked: ${minToHHMM(totalMins)} • Points: ${pf.performance?.points||0}</div>
+      <div style="margin-top:12px" class="grid cols-2">
+        <div>
+          <b>Info</b>
+          <div class="small">Role: ${st?.role||''}</div>
+          <div class="small">Default Centre: ${st?.defaultWorksite||''}</div>
+          <div class="small">Phone: ${pf.info?.phone||''}</div>
+          <div class="small">Email: ${pf.info?.email||''}</div>
+        </div>
+        <div>
+          <b>Documents</b>
+          <div id="doc-list" class="small" style="max-height:160px;overflow:auto;border:1px dashed var(--line);padding:8px;border-radius:8px">
+            ${(pf.docs||[]).map(d=>`<div>• <a download="${d.name}" href="${d.data}">${d.name}</a></div>`).join('') || 'No documents'}
+          </div>
+          <div class="row" style="margin-top:8px">
+            <input id="doc-file" type="file" class="input">
+            <button id="doc-add" class="btn small">Upload</button>
+          </div>
+        </div>
+      </div>
+    `);
+    DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
+    const file = document.getElementById('doc-file');
+    document.getElementById('doc-add').onclick = async () => {
+      if(!file.files.length) return;
+      const f = file.files[0]; const r = new FileReader();
+      r.onload = () => {
+        (pf.docs ||= []).push({ name:f.name, data:r.result });
+        (S.profiles ||= {}); S.profiles[staffId] = pf; save(); closeDrawer(); openProfile(staffId);
+      };
+      r.readAsDataURL(f);
+    };
+  }
+
+  // --- Admin: Leaves
+  V.render_Leaves = el => {
+    const all = (S.leaves||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="head"><b>Submit Leave (Admin)</b></div>
+          <div class="body">
+            <form id="f-leave">
+              <label>Staff</label>
+              <select id="lv-staff" class="input">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
+              <label>Date</label><input id="lv-date" type="date" class="input" value="${today()}">
+              <label>Type</label><select id="lv-type" class="input"><option>Full</option><option>Half</option><option>Short</option></select>
+              <div id="lv-mins-wrap" class="hidden"><label>Minutes (Short)</label><input id="lv-mins" class="input" type="number" placeholder="60"></div>
+              <label>Reason</label><textarea id="lv-reason" class="input"></textarea>
+              <button class="btn primary" style="width:100%;margin-top:8px">Submit (Approved)</button>
+            </form>
+          </div>
+        </div>
+        <div class="card">
+          <div class="head"><b>All Leave Requests</b></div>
+          <div class="body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Applied</th><th>Staff</th><th>Date</th><th>Type</th><th>Status</th><th></th></tr></thead>
+              <tbody id="lv-body">
+                ${all.map(l=>`
+                  <tr>
+                    <td>${fmtDateTime(l.createdAt)}</td>
+                    <td>${S.staff.find(x=>x.id===l.staffId)?.name||l.staffId}</td>
+                    <td>${fmtDate(l.date)}</td>
+                    <td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td>
+                    <td>${l.status}</td>
+                    <td>
+                      <button class="btn small" data-set="${l.id}|Approved">Approve</button>
+                      <button class="btn small" data-set="${l.id}|Pending">Pend</button>
+                      <button class="btn small danger" data-set="${l.id}|Rejected">Reject</button>
+                    </td>
+                  </tr>
+                `).join('') || '<tr><td colspan="6">No leaves.</td></tr>'}
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    `;
+    const t = el.querySelector('#lv-type'), w = el.querySelector('#lv-mins-wrap');
+    t.onchange = () => w.classList.toggle('hidden', t.value!=='Short');
+    el.querySelector('#f-leave').onsubmit = e => {
+      e.preventDefault();
+      const l = {
+        id:id(), staffId: el.querySelector('#lv-staff').value,
+        type: t.value, date: el.querySelector('#lv-date').value,
+        minutes: t.value==='Half' ? S.settings.halfDayMins : (t.value==='Full' ? S.settings.targetMins : (+el.querySelector('#lv-mins').value||0)),
+        reason: el.querySelector('#lv-reason').value, status:'Approved', createdAt:new Date().toISOString()
+      };
+      (S.leaves ||= []).push(l); save(); show('Leaves');
+    };
+    el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => {
+      const [idv, st] = b.getAttribute('data-set').split('|');
+      const i = S.leaves.findIndex(x=>x.id===idv); if(i<0) return; S.leaves[i].status = st; save(); show('Leaves');
+    });
+  };
+
+  // --- Admin: Holidays
+  V.render_Holidays = el => {
+    el.innerHTML = `
+      <div class="card">
+        <div class="head"><b>Holidays</b></div>
+        <div class="body">
+          <form id="f-hol" class="grid cols-3">
+            <div><label>Date</label><input id="h-date" type="date" class="input"></div>
+            <div><label>Title</label><input id="h-title" class="input"></div>
+            <div style="align-self:end"><button class="btn primary" style="width:100%">Add</button></div>
+          </form>
+          <div class="table-wrap" style="margin-top:12px"><table>
+            <thead><tr><th>Date</th><th>Title</th><th></th></tr></thead>
+            <tbody id="h-body">
+              ${(S.holidays||[]).map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td><td><button class="btn small danger" data-del="${h.date}">Delete</button></td></tr>`).join('') || '<tr><td colspan="3">No holidays.</td></tr>'}
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    `;
+    el.querySelector('#f-hol').onsubmit = e => {
+      e.preventDefault();
+      (S.holidays ||= []).push({ date: el.querySelector('#h-date').value, title: el.querySelector('#h-title').value });
+      save(); show('Holidays');
+    };
+    el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+      const d = b.getAttribute('data-del'); S.holidays = (S.holidays||[]).filter(h=>h.date!==d); save(); show('Holidays');
+    });
+  };
+
+  // --- Admin: Inbox (requests) includes Salary Request
+  V.render_Inbox = el => {
+    const list = (S.inbox||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    el.innerHTML = `
+      <div class="card">
+        <div class="head"><b>Requests</b></div>
+        <div class="body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>When</th><th>Staff</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
+            <tbody>
+              ${list.map(m=>`<tr><td>${fmtDateTime(m.createdAt)}</td><td>${S.staff.find(s=>s.id===m.staffId)?.name||m.staffId}</td><td>${m.type}</td><td>${m.subject}</td><td>${m.status}</td></tr>`).join('') || '<tr><td colspan="5">No requests.</td></tr>'}
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="head"><b>Salary Requests</b></div>
+        <div class="body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>When</th><th>Staff</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead>
+            <tbody>
+              ${(S.salaryRequests||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(r=>`<tr>
+                <td>${fmtDateTime(r.createdAt)}</td><td>${S.staff.find(s=>s.id===r.staffId)?.name||r.staffId}</td><td>${r.amount}</td><td>${r.reason}</td><td>${r.status}</td>
+              </tr>`).join('') || '<tr><td colspan="5">No salary requests.</td></tr>'}
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    `;
+  };
+
+  // --- Admin: Rewards (simple point add)
+  V.render_Rewards = el => {
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card"><div class="head"><b>Award Points</b></div><div class="body">
+          <form id="f-rew">
+            <label>Staff</label><select id="rw-staff" class="input">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select>
+            <label>Points</label><input id="rw-points" class="input" type="number" value="10">
+            <label>Reason</label><input id="rw-reason" class="input" placeholder="Event, OT, etc.">
+            <button class="btn primary" style="width:100%;margin-top:8px">Add</button>
+          </form>
+        </div></div>
+        <div class="card"><div class="head"><b>Totals</b></div><div class="body">
+          <div class="kpi">
+            ${S.staff.map(s=>`<div class="item"><div class="value">${(S.profiles?.[s.id]?.performance?.points)||0}</div><div class="label">${s.name}</div></div>`).join('')}
+          </div>
+        </div></div>
+      </div>
+    `;
+    el.querySelector('#f-rew').onsubmit = e => {
+      e.preventDefault();
+      const sid = el.querySelector('#rw-staff').value;
+      const pts = +el.querySelector('#rw-points').value || 0;
+      const reason = el.querySelector('#rw-reason').value;
+      (S.profiles ||= {}); (S.profiles[sid] ||= {performance:{points:0}});
+      (S.profiles[sid].performance ||= {points:0}).points = (S.profiles[sid].performance.points||0) + pts;
+      (S.profiles[sid].rewards ||= []).push({ id:id(), points:pts, reason, at:new Date().toISOString() });
+      save(); show('Rewards');
+    };
+  };
+
+  // --- Admin: Settings
+  V.render_Settings = el => {
+    el.innerHTML = `
+      <div class="card">
+        <div class="head"><b>Settings</b></div>
+        <div class="body">
+          <form id="f-set" class="grid cols-2">
+            <div><label>Organization</label><input id="s-org" class="input" value="${S.settings.org||''}"></div>
+            <div><label>Daily Break (mins)</label><input id="s-break" class="input" type="number" value="${S.settings.breakMins||30}"></div>
+            <div><label>Target Work (mins)</label><input id="s-target" class="input" type="number" value="${S.settings.targetMins||480}"></div>
+            <div><label>Half-day Cap (mins)</label><input id="s-half" class="input" type="number" value="${S.settings.halfDayMins||240}"></div>
+            <div class="grid"><label>Centres</label>
+              <textarea id="s-centres" class="input" rows="4" placeholder="One per line">${(S.settings.centres||[]).join('\\n')}</textarea>
+            </div>
+            <div><label>Webhook URL</label><input id="s-webhook" class="input" placeholder="https://.../mls_daily_state.json" value="${S.settings.webhook||''}"></div>
+            <div style="align-self:end"><button class="btn primary" style="width:100%">Save</button></div>
+          </form>
+        </div>
+      </div>
+    `;
+    el.querySelector('#f-set').onsubmit = e => {
+      e.preventDefault();
+      S.settings.org = el.querySelector('#s-org').value;
+      S.settings.breakMins = +el.querySelector('#s-break').value||30;
+      S.settings.targetMins = +el.querySelector('#s-target').value||480;
+      S.settings.halfDayMins = +el.querySelector('#s-half').value||240;
+      S.settings.centres = el.querySelector('#s-centres').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      S.settings.webhook = el.querySelector('#s-webhook').value.trim();
+      save(); alert('Saved.');
+    };
+  };
+
+  // --- Admin: Export
+  V.render_Export = el => {
+    const download = (name, content, type='text/plain') => {
+      const blob = new Blob([content], {type}); const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    };
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>Export</b></div><div class="body grid cols-3">
+        <button id="ex-staff" class="btn">Staff CSV</button>
+        <button id="ex-sess" class="btn">Sessions CSV</button>
+        <button id="ex-leaves" class="btn">Leaves CSV</button>
+        <button id="ex-shifts" class="btn">Shifts CSV</button>
+        <button id="ex-json" class="btn primary">Full JSON Backup</button>
+      </div></div>
+    `;
+    const toCSV = arr => {
+      if(!arr || !arr.length) return '';
+      const head = Object.keys(arr[0]);
+      const rows = arr.map(o => head.map(k => JSON.stringify(o[k] ?? '')).join(','));
+      return head.join(',') + '\\n' + rows.join('\\n');
+    };
+    el.querySelector('#ex-staff').onclick = ()=> download('staff.csv', toCSV(S.staff||[]));
+    el.querySelector('#ex-sess').onclick = ()=> download('sessions.csv', toCSV(S.sessions||[]));
+    el.querySelector('#ex-leaves').onclick = ()=> download('leaves.csv', toCSV(S.leaves||[]));
+    el.querySelector('#ex-shifts').onclick = ()=> download('shifts.csv', toCSV(S.shifts||[]));
+    el.querySelector('#ex-json').onclick = ()=> download('mls_backup_'+today()+'.json', JSON.stringify(S,null,2), 'application/json');
+  };
+
+  // --- Admin: Notice Board
+  V.render_Notice_Board = el => {
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card"><div class="head"><b>Post Notice</b></div><div class="body">
+          <form id="f-notice">
+            <label>Title</label><input id="n-title" class="input" required>
+            <label>Body</label><textarea id="n-body" class="input" rows="3" required></textarea>
+            <label>Centre</label><select id="n-centre" class="input"><option>All</option>${(S.settings.centres||[]).map(c=>`<option>${c}</option>`)}</select>
+            <button class="btn primary" style="width:100%;margin-top:8px">Publish</button>
+          </form>
+        </div></div>
+        <div class="card"><div class="head"><b>All Notices</b></div><div class="body" id="n-list">
+          ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
+            <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+              <div class="row" style="justify-content:space-between">
+                <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
+              </div>
+              <div style="margin-top:6px">${n.body}</div>
+            </div>
+          `).join('') || '<div class="small">No notices yet.</div>'}
+        </div></div>
+      </div>
+    `;
+    el.querySelector('#f-notice').onsubmit = e => {
+      e.preventDefault();
+      (S.notices ||= []).unshift({ id:id(), title: el.querySelector('#n-title').value, body: el.querySelector('#n-body').value, centre: el.querySelector('#n-centre').value, createdAt: new Date().toISOString() });
+      save(); show('Notice Board');
+    };
+  };
+
+  // --- Admin: Payroll (basic OT calc)
+  V.render_Payroll = el => {
+    // Simple calculation: OT if worked > targetMins per day
+    const rows = [];
+    for(const s of S.staff){
+      const sess = S.sessions.filter(x=>x.staffId===s.id && x.date>=startOfMonth());
+      const byDate = new Map();
+      for(const x of sess){ byDate.set(x.date, true); }
+      let ot = 0, total = 0;
+      for(const d of byDate.keys()){
+        const mins = workedMinutes(s.id, d); total += mins;
+        if(mins > S.settings.targetMins) ot += (mins - S.settings.targetMins);
+      }
+      rows.push({ name:s.name, total, ot });
     }
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>Payroll (This Month)</b></div><div class="body">
+        <div class="table-wrap"><table><thead><tr><th>Staff</th><th>Total (hh:mm)</th><th>OT (hh:mm)</th></tr></thead><tbody>
+          ${rows.map(r=>`<tr><td>${r.name}</td><td>${minToHHMM(r.total)}</td><td>${minToHHMM(r.ot)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div></div>
+    `;
+  };
 
-    const staffName = sid => (S.staff.find(s=>s.id===sid)||{}).name || 'Unknown';
+  // --- Staff: My Dashboard
+  V.render_My_Dashboard = el => {
+    const idd = user.id;
+    const sess = S.sessions.filter(s=>s.staffId===idd && s.date>=startOfMonth());
+    const leaves = S.leaves.filter(l=>l.staffId===idd && l.status==='Approved' && l.date>=startOfMonth());
+    const total = sess.reduce((a,s)=>a+workedMinutes(idd,s.date),0);
+    const points = S.profiles?.[idd]?.performance?.points || 0;
+    el.innerHTML = `
+      <div class="kpi">
+        <div class="item"><div class="value">${minToHHMM(total)}</div><div class="label">Worked (this month)</div></div>
+        <div class="item"><div class="value">${leaves.length}</div><div class="label">Leaves</div></div>
+        <div class="item"><div class="value">${points}</div><div class="label">Points</div></div>
+      </div>
+      <div class="card" style="margin-top:12px"><div class="head"><b>Recent Sessions</b></div><div class="body">
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Worked</th></tr></thead><tbody>
+          ${S.sessions.filter(s=>s.staffId===idd).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${s.clockIn}</td><td>${s.clockOut}</td><td>${minToHHMM(workedMinutes(idd, s.date))}</td></tr>`).join('') || '<tr><td colspan="4">No sessions.</td></tr>'}
+        </tbody></table></div>
+      </div></div>
+    `;
+  };
 
-    // Work math
-    const breakMins = s => (s.breaks||[]).reduce((a,b)=>a+(toMin(b.end||now())-toMin(b.start)),0);
-    function workedMinutes(sid, d){
-      const list = S.sessions.filter(s=>s.staffId===sid && s.date===d);
-      const live = S.live[sid]; if(live && live.date===d) list.push({clockIn:live.clockIn,clockOut:now(),breaks:live.breaks||[]});
-      const leaves = S.leaves.filter(l=>l.staffId===sid && l.date===d && l.status==='Approved');
-      if(leaves.some(l=>l.type==='Full'||l.type==='Annual'||l.minutes>=S.settings.targetMins)) return 0;
-      const total = list.reduce((a,s)=>a+(toMin(s.clockOut)-toMin(s.clockIn)),0);
-      if(total<=0) return 0;
-      const anyBreak = list.some(s=>(s.breaks||[]).length>0);
-      let w = total - (anyBreak ? list.reduce((a,s)=>a+breakMins(s),0) : S.settings.breakMins);
-      const short = leaves.filter(l=>l.type==='Short').reduce((a,l)=>a+l.minutes,0);
-      w -= short;
-      if(leaves.some(l=>l.type==='Half')) w = Math.min(w, S.settings.halfDayMins);
-      return Math.max(0,w);
-    }
-    const isHoliday = d => S.holidays.some(h=>h.date===d);
-    function lateEarlyOT(sid, d){
-      const list = S.sessions.filter(s=>s.staffId===sid && s.date===d);
-      const live = S.live[sid]; if(live && live.date===d) list.push({clockIn:live.clockIn,clockOut:now(),breaks:live.breaks||[]});
-      if(!list.length) return {late:0,early:0,ot:0};
-      const start = toMin(S.settings.workdayStart), end = toMin(S.settings.workdayEnd);
-      const first = Math.min(...list.map(s=>toMin(s.clockIn)));
-      const last  = Math.max(...list.map(s=>toMin(s.clockOut)));
-      const late  = Math.max(0, first - start);
-      const early = Math.max(0, end - last);
-      const worked = workedMinutes(sid,d);
-      const target = isHoliday(d) ? 0 : S.settings.targetMins;
-      const ot = Math.max(0, worked - target);
-      return {late,early,ot};
-    }
+  // --- Staff: Clock (clock in/out + breaks)
+  V.render_Clock = el => {
+    const d = today();
+    const mySess = S.sessions.filter(s=>s.staffId===user.id && s.date===d);
+    const record = (type) => {
+      // simple: create/update a single session for today
+      let s = S.sessions.find(x=>x.staffId===user.id && x.date===d);
+      if(!s){ s = { id:id(), staffId:user.id, date:d, clockIn:'', clockOut:'', centre: worksite }; S.sessions.push(s); }
+      const now = new Date(); const t = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      if(type==='in'){ s.clockIn = t; s.centre = worksite; }
+      if(type==='break'){ (S.breaks ||= []).push({ id:id(), staffId:user.id, date:d, start:t }); }
+      if(type==='resume'){ const b=(S.breaks||[]).reverse().find(b=>b.staffId===user.id && b.date===d && !b.end); if(b) b.end=t; }
+      if(type==='out'){ s.clockOut = t; }
+      save(); show('Clock');
+    };
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>Clock</b></div><div class="body">
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn primary" id="clk-in">Clock In</button>
+          <button class="btn" id="clk-break">Break Start</button>
+          <button class="btn" id="clk-resume">Break End</button>
+          <button class="btn" id="clk-out">Clock Out</button>
+        </div>
+        <div class="small">Today: ${fmtDate(d)} @ ${worksite||'(no centre selected)'}</div>
+        <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Clock In</th><th>Clock Out</th><th>Worked</th></tr></thead><tbody>
+          ${(mySess.length?mySess:[{clockIn:'',clockOut:''}]).map(s=>`<tr><td>${s.clockIn||'-'}</td><td>${s.clockOut||'-'}</td><td>${minToHHMM(workedMinutes(user.id,d))}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div></div>
+    `;
+    el.querySelector('#clk-in').onclick = ()=>record('in');
+    el.querySelector('#clk-break').onclick = ()=>record('break');
+    el.querySelector('#clk-resume').onclick = ()=>record('resume');
+    el.querySelector('#clk-out').onclick = ()=>record('out');
+  };
 
-    // Rewards
-    function awardPoints(sid, pts, reason){
-      const p = S.profiles[sid] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
-      p.performance.points = (p.performance.points||0) + pts;
-      p.pthist.unshift({date:new Date().toISOString(),points:pts,reason});
-      save();
-    }
-    function autoRewardOnFinalize(sid, d){
-      if(isHoliday(d)) awardPoints(sid, S.settings.rewardPoints.holiday, 'Worked on holiday');
-      const otH = Math.floor(lateEarlyOT(sid,d).ot/60); if(otH>0) awardPoints(sid, otH*S.settings.rewardPoints.overtimePerHour, `Overtime ${otH}h`);
-    }
+  // --- Staff: My Leaves
+  V.render_My_Leaves = el => {
+    const my = (S.leaves||[]).filter(l=>l.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card"><div class="head"><b>Request Leave</b></div><div class="body">
+          <form id="f-my-leave">
+            <label>Date</label><input id="s-date" type="date" class="input" value="${today()}">
+            <label>Type</label><select id="s-type" class="input"><option>Full</option><option>Half</option><option>Short</option></select>
+            <div id="s-minwrap" class="hidden"><label>Minutes</label><input id="s-min" class="input" type="number" placeholder="60"></div>
+            <label>Reason</label><textarea id="s-reason" class="input"></textarea>
+            <button class="btn primary" style="width:100%;margin-top:8px">Submit</button>
+          </form>
+        </div></div>
+        <div class="card"><div class="head"><b>My Leave History</b></div><div class="body">
+          <div class="table-wrap"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>
+            ${my.map(l=>`<tr><td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td><td>${l.status}</td></tr>`).join('') || '<tr><td colspan="4">No leave requests.</td></tr>'}
+          </tbody></table></div>
+        </div></div>
+      </div>
+    `;
+    const st = el.querySelector('#s-type'), wrap = el.querySelector('#s-minwrap');
+    st.onchange = () => wrap.classList.toggle('hidden', st.value!=='Short');
+    el.querySelector('#f-my-leave').onsubmit = e => {
+      e.preventDefault();
+      const l = { id:id(), staffId:user.id, type:st.value, date: el.querySelector('#s-date').value, minutes: st.value==='Short'?(+el.querySelector('#s-min').value||0):(st.value==='Half'?S.settings.halfDayMins:S.settings.targetMins), reason: el.querySelector('#s-reason').value, status:'Pending', createdAt:new Date().toISOString() };
+      (S.leaves ||= []).push(l); save(); show('My Leaves');
+    };
+  };
 
-    // Drawer
-    const openDrawer=(title,html)=>{DOM.dtitle.textContent=title; DOM.dbody.innerHTML=html; DOM.overlay.classList.add('show'); DOM.drawer.classList.add('show');};
-    const closeDrawer=()=>{DOM.overlay.classList.remove('show'); DOM.drawer.classList.remove('show');};
+  // --- Staff: My Requests (incl. salary)
+  V.render_My_Requests = el => {
+    const list = (S.inbox||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    const sal = (S.salaryRequests||[]).filter(x=>x.staffId===user.id).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    el.innerHTML = `
+      <div class="grid cols-2">
+        <div class="card"><div class="head"><b>New Request</b></div><div class="body">
+          <form id="f-req">
+            <label>Type</label><select id="rq-type" class="input"><option>message</option><option>equipment</option></select>
+            <label>Subject</label><input id="rq-subj" class="input" required>
+            <label>Message</label><textarea id="rq-body" class="input" rows="3"></textarea>
+            <button class="btn primary" style="width:100%;margin-top:8px">Send</button>
+          </form>
+          <div style="margin-top:16px;border-top:1px dashed var(--line);padding-top:12px">
+            <b>Salary Request</b>
+            <form id="f-salary" style="margin-top:8px">
+              <label>Amount</label><input id="sr-amt" class="input" type="number" placeholder="25000">
+              <label>Reason</label><input id="sr-rsn" class="input" placeholder="Advance for ...">
+              <button class="btn" style="width:100%;margin-top:8px">Submit Salary Request</button>
+            </form>
+          </div>
+        </div></div>
+        <div class="card"><div class="head"><b>My Requests</b></div><div class="body">
+          <div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead><tbody>
+            ${list.map(m=>`<tr><td>${fmtDateTime(m.createdAt)}</td><td>${m.type}</td><td>${m.subject}</td><td>${m.status}</td></tr>`).join('') || '<tr><td colspan="4">No requests yet.</td></tr>'}
+          </tbody></table></div>
+          <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>When</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>
+            ${sal.map(r=>`<tr><td>${fmtDateTime(r.createdAt)}</td><td>${r.amount}</td><td>${r.reason}</td><td>${r.status}</td></tr>`).join('') || '<tr><td colspan="4">No salary requests yet.</td></tr>'}
+          </tbody></table></div>
+        </div></div>
+      </div>
+    `;
+    el.querySelector('#f-req').onsubmit = e => {
+      e.preventDefault();
+      (S.inbox ||= []).unshift({ id:id(), staffId:user.id, type: el.querySelector('#rq-type').value, subject: el.querySelector('#rq-subj').value, body: el.querySelector('#rq-body').value, status:'Pending', createdAt:new Date().toISOString() });
+      save(); show('My Requests');
+    };
+    el.querySelector('#f-salary').onsubmit = e => {
+      e.preventDefault();
+      (S.salaryRequests ||= []).unshift({ id:id(), staffId:user.id, amount:+el.querySelector('#sr-amt').value||0, reason: el.querySelector('#sr-rsn').value, status:'Pending', createdAt:new Date().toISOString() });
+      save(); show('My Requests');
+    };
+  };
 
-    // LOGIN (custom validation; no native pattern)
-    DOM.frm.addEventListener('submit', async (ev)=>{
-      ev.preventDefault(); DOM.err.textContent='';
+  // --- Staff: Company Holidays
+  V.render_Company_Holidays = el => {
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>Upcoming Holidays</b></div><div class="body">
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>
+          ${(S.holidays||[]).filter(h=>h.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td></tr>`).join('') || '<tr><td colspan="2">No upcoming holidays.</td></tr>'}
+        </tbody></table></div>
+      </div></div>
+    `;
+  };
+
+  // --- Staff: Notice Board (read-only)
+  V.render_Notice_Board_Staff = el => {
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>Notice Board</b></div><div class="body">
+        ${(S.notices||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>`
+          <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#10131a">
+            <div class="row" style="justify-content:space-between">
+              <b>${n.title}</b><span class="small">${fmtDateTime(n.createdAt)} • ${n.centre}</span>
+            </div>
+            <div style="margin-top:6px">${n.body}</div>
+          </div>
+        `).join('') || '<div class="small">No notices yet.</div>'}
+      </div></div>
+    `;
+  };
+
+  // --- Staff: My Profile
+  V.render_My_Profile = el => {
+    const pf = (S.profiles?.[user.id]) || {info:{},docs:[],performance:{points:0},rewards:[]};
+    el.innerHTML = `
+      <div class="card"><div class="head"><b>My Profile</b></div><div class="body">
+        <div class="grid cols-2">
+          <div>
+            <div class="small"><b>Name:</b> ${user.name}</div>
+            <div class="small"><b>Role:</b> ${(S.staff.find(s=>s.id===user.id)?.role)||''}</div>
+            <div class="small"><b>Default Centre:</b> ${(S.staff.find(s=>s.id===user.id)?.defaultWorksite)||''}</div>
+            <div class="small"><b>Phone:</b> ${pf.info?.phone||''}</div>
+            <div class="small"><b>Email:</b> ${pf.info?.email||''}</div>
+            <div class="small"><b>Points:</b> ${pf.performance?.points||0}</div>
+          </div>
+          <div>
+            <b>My Documents</b>
+            <div id="pdocs" class="small" style="max-height:160px;overflow:auto;border:1px dashed var(--line);padding:8px;border-radius:8px;margin-top:6px">
+              ${(pf.docs||[]).map(d=>`<div>• <a download="${d.name}" href="${d.data}">${d.name}</a></div>`).join('') || 'No documents'}
+            </div>
+            <div class="row" style="margin-top:8px">
+              <input id="pfile" type="file" class="input">
+              <button id="padd" class="btn small">Upload</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('padd').onclick = () => {
+      const inp = document.getElementById('pfile'); if(!inp.files.length) return;
+      const f = inp.files[0]; const r = new FileReader();
+      r.onload = () => {
+        (pf.docs ||= []).push({ name:f.name, data:r.result });
+        (S.profiles ||= {}); S.profiles[user.id] = pf; save(); show('My Profile');
+      };
+      r.readAsDataURL(f);
+    };
+  };
+
+  // ===== G. GLOBAL EVENTS =====
+  function bindGlobal(){
+    DOM.logout.onclick = () => { user=null; worksite=''; DOM.app.classList.add('hidden'); DOM.login.classList.remove('hidden'); };
+    DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
+
+    DOM.sync.onclick = async () => {
+      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set.');
+      try{
+        if(url.endsWith('.json')){
+          const r = await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+          if(!r.ok) throw new Error(r.status+' '+r.statusText);
+          alert('Synced to Firebase.');
+        }else{
+          const r = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(S)});
+          if(r.type==='opaque' || r.ok){ alert('Sync sent.'); } else { throw new Error(r.status+' '+r.statusText); }
+        }
+      }catch(e){ alert('Sync failed: '+e.message); }
+    };
+
+    DOM.loadCloud.onclick = async () => {
+      const loaded = await fetchCloudState(); alert(loaded?'Loaded latest data.':'Could not load.');
+      if(user) show((user.role==='Admin')? 'Today' : 'My Dashboard');
+    };
+
+    // Admin Safe + Reset
+    DOM.adminSafe.onclick = () => {
+      const centres = S.settings.centres||[]; user={id:'admin',name:'Admin',role:'Admin'}; worksite=centres[0]||'';
+      DOM.login.classList.add('hidden'); DOM.app.classList.remove('hidden'); renderHeader(); renderTabs(); show('Today');
+    };
+    DOM.resetApp.onclick = () => { localStorage.removeItem(KEY); alert('Cleared. Reloading...'); location.reload(); };
+  }
+
+  // ===== H. LOGIN HANDLER =====
+  DOM.frm.addEventListener('submit', async (e) => {
+    e.preventDefault(); DOM.err.textContent='';
+    try{
       const raw = (DOM.pin.value||'').toString().normalize('NFKC');
-      const pin = raw.replace(/\\D/g,'').slice(0,6);
-      const site = DOM.site.value;
-      if(pin.length < 4){DOM.err.textContent='PIN must be 4–6 digits.'; DOM.pin.focus(); return;}
+      const pin = raw.replace(/\D+/g,'');
+      if(!pin){ DOM.err.textContent='Enter your PIN.'; DOM.pin.focus(); return; }
+
+      let site = DOM.site.value || '';
+      // local match
+      let cand = matchPIN(pin);
+
+      // cloud fallback
+      if(!cand){
+        DOM.err.textContent = 'Checking cloud…';
+        const got = await fetchCloudState();
+        if(got){ cand = matchPIN(pin); }
+      }
+      if(!cand){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
+
       if(!site){
-        const st = (S.staff||[]).find(s=>String(s.pin||'').trim()===pin);
-        if(st && st.defaultWorksite){ DOM.site.value = st.defaultWorksite; }
+        const staff = S.staff.find(s=>s.id===cand.id);
+        site = (staff?.defaultWorksite) || (S.settings.centres?.[0] || '');
       }
+      user = { id:cand.id, name:cand.name, role:cand.role };
+      worksite = site;
 
-
-      function tryMatch(){
-        if(pin==='0000'){ return {id:'admin',name:'Admin',role:'Admin'}; }
-        const m = (S.staff||[]).find(s=> String(s.pin||'').trim()===pin && s.active);
-        return m ? {id:m.id,name:m.name,role:'Staff'} : null;
-      }
-      let candidate = tryMatch();
-
-      // Fallback: fetch from webhook and retry once
-      if(!candidate && S.settings && S.settings.webhook){
-        try{
-          const r = await fetch(S.settings.webhook,{method:'GET'});
-          if(r.ok){
-            const data = await r.json();
-            if(data && typeof data==='object'){
-              S=data; save();
-              candidate = tryMatch();
-            }
-          }
-        }catch(e){ /* ignore */ }
-      }
-
-      if(!candidate){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
-
-      user = candidate; worksite = site;
-      const record=(coords)=>{
-        (S.logins ||= []).unshift({id:id(),staffId:user.id,site:worksite,at:new Date().toISOString(),lat:coords?.latitude,lon:coords?.longitude,acc:coords?.accuracy});
+      // record login + geolocation
+      const commitLogin = (coords) => {
+        (S.logins ||= []).unshift({ id:id(), staffId:user.id, site:worksite, at:new Date().toISOString(), lat:coords?.latitude, lon:coords?.longitude });
         save();
       };
       if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(p=>record(p.coords), _=>record(), {enableHighAccuracy:true,timeout:8000,maximumAge:0});
-      } else record();
-      DOM.login.style.display='none'; DOM.app.style.display='block';
-      renderHeader(); renderTabs(); show(TABS[user.role][0]);
+        navigator.geolocation.getCurrentPosition(p=>commitLogin(p.coords), _=>commitLogin(), { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
+      } else commitLogin();
+
+      // enter app
+      DOM.login.classList.add('hidden'); DOM.app.classList.remove('hidden'); renderHeader(); renderTabs();
+      const def = (user.role==='Admin')? 'Today' : 'My Dashboard';
+      show(def);
       DOM.pin.value='';
-    });
-
-    function renderHeader(){
-      DOM.badge.className='badge ' + (user.role==='Admin'?'admin':'staff');
-      DOM.badge.textContent = user.role + (user.role==='Staff' ? ' — ' + user.name : '');
-      DOM.loc.textContent = '📍 ' + (worksite||'');
-      DOM.theme.checked = (localStorage.getItem('mls_theme')==='dark');
-      document.body.className = DOM.theme.checked ? 'dark' : 'light';
+    }catch(err){
+      console.error(err); DOM.err.textContent = 'Login error: '+(err.message||err);
     }
+  });
 
-    function renderTabs(){
-      const tabs = TABS[user.role];
-      DOM.tabs.innerHTML = tabs.map(t=>`<button class="btn tab" data-v="${t}">${t}</button>`).join('');
-      [...DOM.tabs.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
-    }
-
-    
-function show(name){
-  // Activate tab button
-  [...document.querySelectorAll('.btn.tab')].forEach(b=>b.classList.toggle('active', b.dataset.v===name));
-
-  // Ensure view container
-  const id = 'v-'+name.replace(/\s+/g,'');
-  let el = document.getElementById(id);
-  if(!el){ el=document.createElement('section'); el.id=id; el.className='view'; DOM.main.appendChild(el); }
-
-  // Swap visibility
-  [...document.querySelectorAll('.view')].forEach(v=>v.classList.remove('active'));
-  el.classList.add('active');
-
-  // Global actions (safe to (re)bind each time)
-  DOM.logout.onclick=()=>{user=null; worksite=null; DOM.app.style.display='none'; DOM.login.style.display='flex';};
-  DOM.dclose.onclick=closeDrawer; DOM.overlay.onclick=closeDrawer;
-  DOM.sync.onclick=async()=>{
-    const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
-    if(!confirm('Send all current data to the webhook?')) return;
-    try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)}); if(!r.ok) throw new Error(r.status+' '+r.statusText); alert('Sync successful');}
-    catch(e){alert('Sync failed: '+e.message);}
-  };
-  DOM.loadCloud.onclick=async()=>{
-    const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
-    try{const r=await fetch(url,{method:'GET'}); if(!r.ok) throw new Error(r.status+' '+r.statusText); const data = await r.json(); if(!data || typeof data!=='object') throw new Error('Invalid data'); S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]); }catch(e){alert('Load failed: '+e.message);}
-  };
-  DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
-
-  // Resolve and render view
-  const candidates = [
-    'render_'+name.replace(/\s+/g,'_').replace(/[^A-Za-z_]/g,''), // "Shift Planner" -> render_Shift_Planner
-    'render_'+name.replace(/\s+/g,'').replace(/[^A-Za-z_]/g,''),  // "Shift Planner" -> render_ShiftPlanner
-  ];
-  for(const fn of candidates){
-    if(V[fn]){
-      try{ V[fn](el); return; }
-      catch(err){
-        console.error('Render error in', fn, err);
-        el.innerHTML = '<div class="card"><h3>'+name+'</h3><p style="color:var(--red)">Render error: '+(err && (err.message||err))+'</p></div>';
-        return;
-      }
-    }
-  }
-  el.innerHTML = '<div class="card"><h3>'+name+'</h3><p>Feature not available.</p></div>';
-}
-  // Swap visibility
-      // actions
-    DOM.logout.onclick=()=>{user=null; worksite=null; DOM.app.style.display='none'; DOM.login.style.display='flex';};
-    DOM.dclose.onclick=closeDrawer; DOM.overlay.onclick=closeDrawer;
-    DOM.sync.onclick=async()=>{
-      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
-      if(!confirm('Send all current data to the webhook?')) return;
-      try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)}); if(!r.ok) throw new Error(r.status+' '+r.statusText); alert('Sync successful');}
-      catch(e){alert('Sync failed: '+e.message);}
-    };
-    DOM.loadCloud.onclick=async()=>{
-      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set in Settings.');
-      try{const r=await fetch(url,{method:'GET'}); if(!r.ok) throw new Error(r.status+' '+r.statusText); const data = await r.json(); if(!data || typeof data!=='object') throw new Error('Invalid data'); S = data; save(); alert('Loaded from webhook'); if(user) show(TABS[user.role][0]); }catch(e){alert('Load failed: '+e.message);}
-    };
-    DOM.theme.onchange=()=>{localStorage.setItem('mls_theme', DOM.theme.checked?'dark':'light'); document.body.className= DOM.theme.checked?'dark':'light';};
-
-    // Clocking helpers (staff)
-    function clockIn(){ const idu=user.id, d=today(); if(S.live[idu]?.date===d) return alert('Already clocked in');
-      S.live[idu]={date:d,clockIn:now(),breaks:[],status:'in',location:worksite}; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
-    function startBreak(){ const L=S.live[user.id]; if(!L || L.status==='break') return alert(!L?'Clock in first':'Already on a break'); L.breaks.push({start:now(),end:null}); L.status='break'; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
-    function endBreak(){ const L=S.live[user.id]; if(!L || L.status!=='break') return alert(!L?'Clock in first':'Not on a break'); const last=L.breaks[L.breaks.length-1]; if(last && !last.end) last.end=now(); L.status='in'; save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); }
-    function clockOut(){ const L=S.live[user.id]; if(!L) return alert('Clock in first'); if(L.status==='break') return alert('End break before clocking out');
-      S.sessions.push({id:id(),staffId:user.id,date:L.date,clockIn:L.clockIn,clockOut:now(),breaks:L.breaks||[],location:L.location||worksite});
-      delete S.live[user.id]; autoRewardOnFinalize(user.id, today()); save(); const el=document.getElementById('v-MyDashboard'); if(el) V.render_My_Dashboard(el); alert('Clocked out.'); }
-
-    // Views (same feature set as previous final)
-    const V={
-      render_Today(el){
-        const d=today();
-        const options = ['All', ...LOCS];
-        const live = Object.entries(S.live).filter(([sid,ls])=>ls.date===d).map(([sid,ls])=>({staffId:sid, ...ls, live:true}));
-        const started = S.sessions.filter(s=>s.date===d).map(s=>({staffId:s.staffId, clockIn:s.clockIn, location:s.location}));
-        const map=new Map(); started.forEach(s=>map.set(s.staffId,s)); live.forEach(s=>map.set(s.staffId,s));
-        const rows=[...map.values()];
-        el.innerHTML=`
-          <div class="card">
-            <h3>Who's In Today</h3>
-            <div style="display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap">
-              <div style="flex:1;min-width:220px">
-                <label>Filter by Centre</label>
-                <select id="tCentre">${options.map(o=>`<option>${o}</option>`).join('')}</select>
-              </div>
-            </div>
-            <div class="table" style="margin-top:8px">
-              <table id="tTbl">
-                <thead><tr><th>Staff</th><th>Location</th><th>Clocked In</th><th>Status</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>`;
-        const tbody = el.querySelector('#tTbl tbody');
-        const renderBody=(centre)=>{
-          const list = rows
-            .filter(r=> centre==='All' || (r.location||'')===centre)
-            .sort((a,b)=>(a.location||'').localeCompare(b.location||'')||staffName(a.staffId).localeCompare(staffName(b.staffId)));
-          tbody.innerHTML = list.length ? list.map(r=>`<tr><td>${staffName(r.staffId)}</td><td>${r.location||'-'}</td><td>${r.clockIn||'-'}</td><td>${r.live?'<span class="chip Approved">IN</span>':'<span class="chip Pending">done</span>'}</td></tr>`).join('') : `<tr><td colspan="4">No one at this centre.</td></tr>`;
-        };
-        renderBody('All');
-        el.querySelector('#tCentre').onchange=(e)=>renderBody(e.target.value);
-      },
-      render_Attendance(el){
-        el.innerHTML=`
-          <div class="card">
-            <h3>Attendance Log</h3>
-            <div class="grid g4">
-              <div><label>Start</label><input type="date" id="a1" value="${new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().split('T')[0]}"></div>
-              <div><label>End</label><input type="date" id="a2" value="${today()}"></div>
-              <div><label>Staff</label><select id="as"><option value="all">All</option>${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
-              <div><label>Location</label><select id="al"><option value="all">All</option>${LOCS.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
-              <div style="align-self:end"><button id="af" class="btn secondary">Filter</button></div>
-            </div>
-            <div class="table" style="margin-top:10px"><table id="att"><thead><tr><th>Staff</th><th>Date</th><th>Location</th><th>Worked</th><th>Late</th><th>Early</th><th>OT</th><th>Holiday</th></tr></thead><tbody><tr><td colspan="8">Apply filters…</td></tr></tbody></table></div>
-          </div>`;
-        el.querySelector('#af').onclick=()=>{
-          const a=el.querySelector('#a1').value,b=el.querySelector('#a2').value,sf=el.querySelector('#as').value, lf=el.querySelector('#al').value;
-          const keys=new Set();
-          S.sessions.filter(s=>s.date>=a&&s.date<=b&&(sf==='all'||s.staffId===sf)&&(lf==='all'||s.location===lf)).forEach(s=>keys.add(s.staffId+'|'+s.date));
-          Object.entries(S.live).forEach(([sid,ls])=>{if(ls.date>=a&&ls.date<=b&&(sf==='all'||sid===sf)&&(lf==='all'||ls.location===lf))keys.add(sid+'|'+ls.date)});
-          const tbody=el.querySelector('#att tbody'); const rows=[...keys].map(k=>{const [sid,d]=k.split('|'); return {sid,d};});
-          if(!rows.length){tbody.innerHTML='<tr><td colspan="8">No records.</td></tr>';return;}
-          tbody.innerHTML=rows.sort((x,y)=>y.d.localeCompare(x.d)||staffName(x.sid).localeCompare(staffName(y.sid))).map(r=>{
-            const w=workedMinutes(r.sid,r.d), m=lateEarlyOT(r.sid,r.d), sess=S.sessions.find(s=>s.staffId===r.sid && s.date===r.d);
-            const loc=(S.live[r.sid]?.date===r.d && S.live[r.sid].location) || (sess?.location) || '';
-            return `<tr><td>${staffName(r.sid)}</td><td>${fmt(r.d)}</td><td>${loc||'-'}</td><td>${hhmm(w)}</td>
-            <td>${m.late?'<span class="chip Late">'+hhmm(m.late)+'</span>':'—'}</td>
-            <td>${m.early?'<span class="chip Early">'+hhmm(m.early)+'</span>':'—'}</td>
-            <td>${m.ot?'<span class="chip Overtime">'+hhmm(m.ot)+'</span>':'—'}</td>
-            <td>${isHoliday(r.d)?'Yes':'No'}</td></tr>`;
-          }).join('');
-        };
-      },
-      render_Leaves(el){
-        const all=[...S.leaves].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        el.innerHTML=`
-          <div class="grid g2">
-            <div class="card">
-              <h3>Submit Leave for Staff</h3>
-              <form id="admin-leave-form" novalidate>
-                <div><label for="leave-staff">Staff</label><select id="leave-staff">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
-                <div><label for="leave-date">Date</label><input type="date" id="leave-date" value="${today()}"></div>
-                <div><label for="leave-type">Type</label><select id="leave-type"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div>
-                <div id="minsWrap" class="hidden"><label for="leave-mins">Minutes (Short)</label><input type="number" id="leave-mins" placeholder="60"></div>
-                <div><label for="leave-reason">Reason</label><textarea id="leave-reason" rows="2"></textarea></div>
-                <button class="btn">Submit</button>
-              </form>
-            </div>
-            <div class="card">
-              <h3>All Leave Requests</h3>
-              <div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Staff</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>${all.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${staffName(l.staffId)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td><td><button class="btn secondary la" data-id="${l.id}" data-s="Approved">Approve</button> <button class="btn secondary la" data-id="${l.id}" data-s="Pending">Pend</button> <button class="btn danger la" data-id="${l.id}" data-s="Rejected">Reject</button></td></tr>`).join('') || `<tr><td colspan="6">No leaves.</td></tr>`}</tbody></table></div>
-            </div>
-          </div>`;
-        const type=el.querySelector('#leave-type'), wrap=el.querySelector('#minsWrap'); type.onchange=()=>{wrap.classList.toggle('hidden', type.value!=='Short');};
-        el.querySelector('#admin-leave-form').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:el.querySelector('#leave-staff').value,type:type.value,date:el.querySelector('#leave-date').value,minutes:el.querySelector('#leave-mins').valueAsNumber||0,reason:el.querySelector('#leave-reason').value,status:'Approved',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_Leaves(el); alert('Leave submitted.');};
-        el.querySelectorAll('.la').forEach(b=>b.onclick=()=>{const it=S.leaves.find(x=>x.id===b.dataset.id); if(it){it.status=b.dataset.s; save(); V.render_Leaves(el);}});
-      },
-      render_Holidays(el){
-        el.innerHTML=`<div class="card"><h3>Company Holidays</h3>
-          <form id="hf" class="grid g2" novalidate><div><label>Date</label><input type="date" id="hd"></div><div><label>Title</label><input id="ht"></div><button class="btn">Add</button></form>
-          <div class="table" style="margin-top:10px"><table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>${S.holidays.sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmt(h.date)}</td><td>${h.title}</td></tr>`).join('') || `<tr><td colspan="2">None.</td></tr>`}</tbody></table></div></div>`;
-        el.querySelector('#hf').onsubmit=(e)=>{e.preventDefault(); const d=el.querySelector('#hd').value,t=el.querySelector('#ht').value.trim(); if(!d||!t) return alert('Fill both'); S.holidays.push({date:d,title:t}); save(); V.render_Holidays(el);};
-      },
-      render_Inbox(el){
-        const items=[...S.inbox].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        el.innerHTML=`<div class="card"><h3>Inbox</h3><div class="table"><table><thead><tr><th>When</th><th>From</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${items.map(x=>`<tr class="row" data-id="${x.id}" style="cursor:pointer"><td>${fmtDT(x.createdAt)}</td><td>${staffName(x.staffId)}</td><td>${x.subject}</td><td>${x.type}</td><td><span class="chip ${x.status}">${x.status}</span></td></tr>`).join('') || `<tr><td colspan="5">Empty</td></tr>`}</tbody></table></div></div>`;
-        el.querySelectorAll('.row').forEach(r=>r.onclick=()=>openThread(r.dataset.id));
-      },
-      render_Staff(el){
-        el.innerHTML=`<div class="grid g2">
-          <div class="card"><h3>Add Staff</h3><form id="sf" novalidate><div><label>ID</label><input id="sid" required></div><div><label>Name</label><input id="sname" required></div><div><label>Role</label><input id="srole" required></div><div><label>Default Worksite</label><select id="ssite">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label>PIN (4 digits)</label><input id="spin" inputmode="numeric" maxlength="4" required></div><button class="btn">Add</button></form></div>
-          <div class="card"><h3>Manage Staff</h3><div class="table"><table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Default Site</th><th>Status</th><th>Profile</th><th>Actions</th></tr></thead><tbody>${S.staff.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.role}</td><td>${s.defaultWorksite||''}</td><td><span class="chip ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td><td><button class="btn secondary pview" data-id="${s.id}">Open</button></td><td><button class="btn secondary sa" data-id="${s.id}" data-a="${s.active?'deactivate':'activate'}">${s.active?'Deactivate':'Activate'}</button> <button class="btn danger sa" data-id="${s.id}" data-a="remove">Remove</button></td></tr>`).join('')}</tbody></table></div></div>
-        </div>`;
-        el.querySelector('#sf').onsubmit=(e)=>{e.preventDefault();
-          const ns={id:el.querySelector('#sid').value.trim(),name:el.querySelector('#sname').value.trim(),role:el.querySelector('#srole').value.trim(),defaultWorksite:el.querySelector('#ssite').value.trim(),pin:String((el.querySelector('#spin').value||'').replace(/\\D/g,'')),active:true};
-          if(ns.pin.length!==4) return alert('PIN must be exactly 4 digits.');
-          if(!ns.id||!ns.name||!ns.role||!ns.pin) return alert('Fill all');
-          if(S.staff.some(s=>s.id===ns.id)) return alert('ID exists');
-          S.staff.push(ns); save(); V.render_Staff(el);
-          if(S.settings && S.settings.webhook){
-            setTimeout(()=>{ if(confirm('Staff added. Sync to cloud so they can log in from other devices?')) DOM.sync.click(); }, 0);
-          }
-        };
-        el.querySelectorAll('.sa').forEach(b=>b.onclick=()=>{const s=S.staff.find(x=>x.id===b.dataset.id); if(!s) return; if(b.dataset.a==='remove'){if(!confirm('Remove staff?')) return; S.staff=S.staff.filter(x=>x.id!==s.id);} else s.active = !s.active; save(); V.render_Staff(el);});
-        el.querySelectorAll('.pview').forEach(b=>b.onclick=()=>openProfile(b.dataset.id));
-      },
-      render_Rewards(el){
-        const board=[...S.staff].map(s=>({name:s.name,pts:S.profiles[s.id]?.performance?.points||0})).sort((a,b)=>b.pts-a.pts);
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Award Points</h3><form id="rw" novalidate><div><label>Staff</label><select id="rwS">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Points</label><input id="rwP" type="number" value="${S.settings.rewardPoints.eventDefault}"></div><div><label>Reason</label><input id="rwR" placeholder="Event participation"></div><button class="btn">Give</button></form></div><div class="card"><h3>Leaderboard</h3><div class="table"><table><thead><tr><th>Staff</th><th>Points</th></tr></thead><tbody>${board.map(x=>`<tr><td>${x.name}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div></div></div>`;
-        el.querySelector('#rw').onsubmit=(e)=>{e.preventDefault(); const sid=el.querySelector('#rwS').value, pts=Number(el.querySelector('#rwP').value)||0, reason=el.querySelector('#rwR').value||'Event participation'; awardPoints(sid,pts,reason); alert('Points awarded.'); V.render_Rewards(el);};
-      },
-      render_Shift_Planner(el){
-        const rows=[...S.shifts].sort((a,b)=>a.date.localeCompare(b.date)||staffName(a.staffId).localeCompare(staffName(b.staffId)));
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Add Shift</h3><form id="shf" novalidate><div class="grid g2"><div><label>Date</label><input type="date" id="shd" value="${today()}"></div><div><label>Location</label><select id="shl">${LOCS.map(x=>`<option>${x}</option>`).join('')}</select></div><div><label>Staff</label><select id="shs">${S.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div><label>Start</label><input type="time" id="shst" value="09:00"></div><div><label>End</label><input type="time" id="shen" value="17:30"></div></div><div><label>Notes</label><input id="shn"></div><button class="btn">Add</button></form></div><div class="card"><h3>Shifts</h3><div class="table"><table><thead><tr><th>Date</th><th>Location</th><th>Staff</th><th>Start</th><th>End</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.location}</td><td>${staffName(r.staffId)}</td><td>${r.start}</td><td>${r.end}</td><td>${r.notes||''}</td><td><button class="btn danger del" data-id="${r.id}">Delete</button></td></tr>`).join('') || `<tr><td colspan="7">No shifts yet.</td></tr>`}</tbody></table></div></div></div>`;
-        el.querySelector('#shf').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),date:el.querySelector('#shd').value,location:el.querySelector('#shl').value,staffId:el.querySelector('#shs').value,start:el.querySelector('#shst').value,end:el.querySelector('#shen').value,notes:el.querySelector('#shn').value}; if(!o.date||!o.location||!o.staffId||!o.start||!o.end) return alert('Fill all'); S.shifts.push(o); save(); V.render_Shift_Planner(el);};
-        el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{S.shifts=S.shifts.filter(x=>x.id!==b.dataset.id); save(); V.render_Shift_Planner(el);});
-      },
-      render_Notice_Board(el){
-        if(user.role==='Admin'){
-          const all=[...S.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-          el.innerHTML=`<div class="grid g2">
-            <div class="card">
-              <h3>Post a Notice</h3>
-              <form id="nb" novalidate>
-                <div><label>Audience (Centre)</label>
-                  <select id="nbSite">
-                    <option>All</option>
-                    ${LOCS.map(l=>`<option>${l}</option>`).join('')}
-                  </select>
-                </div>
-                <div><label>Title</label><input id="nbTitle" required></div>
-                <div><label>Message</label><textarea id="nbBody" rows="3" required></textarea></div>
-                <button class="btn">Publish</button>
-              </form>
-            </div>
-            <div class="card">
-              <h3>Notices</h3>
-              <div class="table"><table><thead><tr><th>When</th><th>Centre</th><th>Title</th><th></th></tr></thead><tbody>
-                ${all.map(n=>`<tr><td>${fmtDT(n.createdAt)}</td><td>${n.site}</td><td>${n.title}</td><td><button class="btn danger del" data-id="${n.id}">Delete</button></td></tr>`).join('')||`<tr><td colspan="4">No notices.</td></tr>`}
-              </tbody></table></div>
-            </div>
-          </div>`;
-          el.querySelector('#nb').onsubmit=(e)=>{e.preventDefault(); const site=el.querySelector('#nbSite').value, title=el.querySelector('#nbTitle').value.trim(), body=el.querySelector('#nbBody').value.trim(); if(!title||!body) return alert('Fill title and message'); S.notices.unshift({id:id(),site,title,body,createdAt:new Date().toISOString(),author:user.name||'Admin'}); save(); V.render_Notice_Board(el); alert('Published');};
-          el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{S.notices=S.notices.filter(x=>x.id!==b.dataset.id); save(); V.render_Notice_Board(el);});
-        }else{
-          const relevant = (S.notices||[]).filter(n=> n.site==='All' || n.site===worksite).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-          el.innerHTML=`<div class="card"><h3>Notice Board — ${worksite||'All Centres'}</h3>
-            <div class="table"><table><thead><tr><th>When</th><th>Title</th><th>Centre</th><th>Message</th></tr></thead><tbody>
-              ${relevant.map(n=>`<tr><td>${fmtDT(n.createdAt)}</td><td>${n.title}</td><td>${n.site}</td><td>${n.body}</td></tr>`).join('') || `<tr><td colspan="4">No notices yet.</td></tr>`}
-            </tbody></table></div>
-          </div>`;
-        }
-      },
-      render_Settings(el){
-        const s=S.settings;
-        el.innerHTML=`<div class="card"><h3>Settings</h3><form id="set" class="grid g3" novalidate>
-          <div><label>Organization</label><input id="og" value="${s.org}"></div>
-          <div><label>Break (mins)</label><input id="br" type="number" value="${s.breakMins}"></div>
-          <div><label>Target (mins)</label><input id="tg" type="number" value="${s.targetMins}"></div>
-          <div><label>Half-day (mins)</label><input id="hd" type="number" value="${s.halfDayMins}"></div>
-          <div><label>Workday Start</label><input id="ws" type="time" value="${s.workdayStart}"></div>
-          <div><label>Workday End</label><input id="we" type="time" value="${s.workdayEnd}"></div>
-          <div><label>Pay Start</label><input id="ps" type="date" value="${s.payPeriodStart}"></div>
-          <div><label>Pay End</label><input id="pe" type="date" value="${s.payPeriodEnd}"></div>
-          <div><label>Webhook</label><input id="wh" placeholder="https://…" value="${s.webhook}"></div>
-          <div><label>Holiday Points</label><input id="rp1" type="number" value="${s.rewardPoints.holiday}"></div>
-          <div><label>Overtime /h</label><input id="rp2" type="number" value="${s.rewardPoints.overtimePerHour}"></div>
-          <div><label>Event Default</label><input id="rp3" type="number" value="${s.rewardPoints.eventDefault}"></div>
-          <button class="btn" style="grid-column:1/-1">Save</button>
-        </form></div>`;
-        el.querySelector('#set').onsubmit=(e)=>{e.preventDefault(); s.org=el.querySelector('#og').value; s.breakMins=el.querySelector('#br').valueAsNumber; s.targetMins=el.querySelector('#tg').valueAsNumber; s.halfDayMins=el.querySelector('#hd').valueAsNumber; s.workdayStart=el.querySelector('#ws').value; s.workdayEnd=el.querySelector('#we').value; s.payPeriodStart=el.querySelector('#ps').value; s.payPeriodEnd=el.querySelector('#pe').value; s.webhook=el.querySelector('#wh').value; s.rewardPoints.holiday=el.querySelector('#rp1').valueAsNumber; s.rewardPoints.overtimePerHour=el.querySelector('#rp2').valueAsNumber; s.rewardPoints.eventDefault=el.querySelector('#rp3').valueAsNumber; save(); alert('Saved');};
-      },
-      render_Export(el){
-        el.innerHTML=`<div class="card"><h3>Export</h3><div class="grid g4" style="margin-top:10px">
-          <button class="btn secondary" id="ex1">Staff CSV</button>
-          <button class="btn secondary" id="ex2">Sessions CSV</button>
-          <button class="btn secondary" id="ex3">Leaves CSV</button>
-          <button class="btn secondary" id="ex4">Shifts CSV</button>
-          <button class="btn secondary" id="ex5">Login Locations CSV</button>
-          <button class="btn secondary" id="ex7">Notices CSV</button>
-          <button class="btn" id="ex6">Full Backup (JSON)</button>
-        </div></div>`;
-        const dl=(rows,name)=>{if(!rows.length) return alert('No data'); const headers=Object.keys(rows[0]); const csv=[headers.join(','),...rows.map(r=>headers.map(h=>JSON.stringify(r[h]??'')).join(','))].join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=name; document.body.appendChild(a); a.click(); a.remove();};
-        el.querySelector('#ex1').onclick=()=>dl(S.staff,'mls_staff.csv'); el.querySelector('#ex2').onclick=()=>dl(S.sessions,'mls_sessions.csv'); el.querySelector('#ex3').onclick=()=>dl(S.leaves,'mls_leaves.csv'); el.querySelector('#ex4').onclick=()=>dl(S.shifts,'mls_shifts.csv'); el.querySelector('#ex5').onclick=()=>dl(S.logins,'mls_login_locations.csv'); el.querySelector('#ex7').onclick=()=>dl(S.notices,'mls_notices.csv');
-        el.querySelector('#ex6').onclick=()=>{const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'})); a.download='mls_backup_'+today()+'.json'; document.body.appendChild(a); a.click(); a.remove();};
-      },
-      render_Payroll(el){
-        el.innerHTML=`<div class="card"><h3>Payroll Summary</h3><form id="pf" class="grid g3" style="align-items:end" novalidate><div><label>Start</label><input id="p1" type="date" value="${S.settings.payPeriodStart}"></div><div><label>End</label><input id="p2" type="date" value="${S.settings.payPeriodEnd}"></div><button class="btn">Download CSV</button></form><p class="note">Includes worked minutes (hh:mm) and overtime minutes.</p></div>`;
-        el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); const a=el.querySelector('#p1').value,b=el.querySelector('#p2').value; const rows=[]; S.staff.forEach(s=>{const days=[...new Set(S.sessions.filter(x=>x.staffId===s.id && x.date>=a && x.date<=b).map(x=>x.date))]; const w=days.reduce((c,d)=>c+workedMinutes(s.id,d),0); const target=days.reduce((c,d)=>c+(isHoliday(d)?0:S.settings.targetMins),0); const ot=Math.max(0,w-target); rows.push({staffId:s.id,name:s.name,worked_minutes:w,worked_hhmm:hhmm(w),overtime_minutes:ot});}); if(!rows.length) return alert('No data'); const headers=Object.keys(rows[0]); const csv=[headers.join(','),...rows.map(r=>headers.map(h=>JSON.stringify(r[h])).join(','))].join('\n'); const ael=document.createElement('a'); ael.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); ael.download='payroll_'+a+'_to_'+b+'.csv'; document.body.appendChild(ael); ael.click(); ael.remove(); };
-      },
-      // Staff
-      render_My_Dashboard(el){
-        const sid=user.id, som=new Date(new Date().getFullYear(), new Date().getMonth(),1).toISOString().split('T')[0];
-        const days=[...new Set(S.sessions.filter(s=>s.staffId===sid && s.date>=som).map(s=>s.date))];
-        const worked=days.reduce((a,d)=>a+workedMinutes(sid,d),0);
-        const ot=days.reduce((a,d)=>a+lateEarlyOT(sid,d).ot,0);
-        const points=S.profiles[sid]?.performance?.points||0;
-        el.innerHTML=`<div class="card"><h3>This Month</h3><div class="grid g3"><div><div class="note">Worked Hours</div><div style="font-size:1.6rem;font-weight:800;color:var(--green)">${hhmm(worked)}</div></div><div><div class="note">Overtime</div><div style="font-size:1.6rem;font-weight:800;color:var(--blue)">${hhmm(ot)}</div></div><div><div class="note">Points</div><div style="font-size:1.6rem;font-weight:800">${points}</div></div></div></div>
-        <div class="card"><h3>Record Attendance</h3><p class="note">Today: ${fmt(today())} • Site: ${worksite||'-'}</p><div class="dock"><button id="cin" class="btn">Clock In</button><button id="bs" class="btn secondary">Break Start</button><button id="be" class="btn secondary">Break End</button><button id="co" class="btn danger">Clock Out</button></div></div>
-        <div class="card"><h3>Recent Sessions</h3><div class="table"><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Worked</th><th>Location</th></tr></thead><tbody>${S.sessions.filter(s=>s.staffId===sid).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(s=>`<tr><td>${fmt(s.date)}</td><td>${s.clockIn}</td><td>${s.clockOut}</td><td>${hhmm(workedMinutes(sid,s.date))}</td><td>${s.location||'-'}</td></tr>`).join('')}</tbody></table></div></div>`;
-        el.querySelector('#cin').onclick=clockIn; el.querySelector('#bs').onclick=startBreak; el.querySelector('#be').onclick=endBreak; el.querySelector('#co').onclick=clockOut;
-      },
-      render_My_Leaves(el){
-        const my=[...S.leaves].filter(l=>l.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>Request Leave</h3><form id="sl" novalidate><div><label>Date</label><input type="date" id="sd" value="${today()}"></div><div><label>Type</label><select id="st"><option>Annual</option><option>Sick</option><option>Casual</option><option>Full</option><option>Half</option><option>Short</option></select></div><div id="smins" class="hidden"><label>Minutes (Short)</label><input type="number" id="sm" placeholder="60"></div><div><label>Reason</label><textarea id="sr" rows="2"></textarea></div><button class="btn">Submit</button></form></div><div class="card"><h3>My Leave History</h3><div class="table"><table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody>${my.map(l=>`<tr><td>${fmtDT(l.createdAt)}</td><td>${fmt(l.date)}</td><td>${l.type}${l.type==='Short'?' ('+l.minutes+'m)':''}</td><td><span class="chip ${l.status}">${l.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
-        const t=el.querySelector('#st'), w=el.querySelector('#smins'); t.onchange=()=>w.classList.toggle('hidden', t.value!=='Short');
-        el.querySelector('#sl').onsubmit=(e)=>{e.preventDefault(); const obj={id:id(),staffId:user.id,type:t.value,date:el.querySelector('#sd').value,minutes:el.querySelector('#sm').valueAsNumber||0,reason:el.querySelector('#sr').value,status:'Pending',createdAt:new Date().toISOString()}; if(obj.type==='Half') obj.minutes=S.settings.halfDayMins; if(['Full','Annual','Sick','Casual'].includes(obj.type)) obj.minutes=S.settings.targetMins; S.leaves.push(obj); save(); V.render_My_Leaves(el); alert('Submitted.');};
-      },
-      render_My_Requests(el){
-        el.innerHTML=`<div class="grid g2"><div class="card"><h3>New Request</h3><form id="rq" novalidate><div><label>Type</label><select id="rt"><option value="message">Message</option><option value="equipment">Equipment</option><option value="salary">Salary Request</option></select></div><div><label>Subject</label><input id="rs" required></div><div id="ramtWrap" class="hidden"><label>Amount (LKR)</label><input id="ramt" type="number" min="0" step="1"></div><div><label>Message</label><textarea id="rb" rows="3" required></textarea></div><button class="btn">Send</button></form></div><div class="card"><h3>My Requests</h3><div class="table"><table><thead><tr><th>When</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>${S.inbox.filter(i=>i.staffId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(i=>`<tr><td>${fmtDT(i.createdAt)}</td><td>${i.subject}</td><td>${i.type}${i.type==='salary'&&i.amount? ' — '+i.amount.toLocaleString('en-LK',{style:'currency',currency:'LKR'}):''}</td><td><span class="chip ${i.status}">${i.status}</span></td></tr>`).join('')||`<tr><td colspan="4">No requests.</td></tr>`}</tbody></table></div></div></div>`;
-        const type=el.querySelector('#rt'), amtW=el.querySelector('#ramtWrap'); type.onchange=()=>amtW.classList.toggle('hidden', type.value!=='salary');
-        el.querySelector('#rq').onsubmit=(e)=>{e.preventDefault(); const o={id:id(),staffId:user.id,type:type.value,subject:el.querySelector('#rs').value.trim(),body:el.querySelector('#rb').value.trim(),status:'Pending',createdAt:new Date().toISOString(),replies:[]}; if(type.value==='salary'){o.amount=Number(el.querySelector('#ramt').value)||0;} if(!o.subject||!o.body) return alert('Fill subject and message'); S.inbox.unshift(o); save(); V.render_My_Requests(el); alert('Request sent.');};
-      },
-      render_My_Profile(el){
-        const p=S.profiles[user.id] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
-        el.innerHTML=`<div class="card"><h3>My Profile</h3><form id="pf" class="grid g2" novalidate><div><label>Full Name</label><input id="pf1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="pf2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="pf3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="pf4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="pf5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="pf6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="pf7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="pf8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div>
-        <div class="card"><h3>My Documents</h3><input id="up" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No files yet.</td></tr>`}</tbody></table></div></div>
-        <div class="card"><h3>My Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`;
-        el.querySelector('#pf').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=el.querySelector('#pf1').value; p.info.email=el.querySelector('#pf2').value; p.info.phone=el.querySelector('#pf3').value; p.info.address=el.querySelector('#pf4').value; p.info.idNo=el.querySelector('#pf5').value; p.info.dob=el.querySelector('#pf6').value; p.info.qualifications=el.querySelector('#pf7').value; p.info.remarks=el.querySelector('#pf8').value; save(); alert('Saved');};
-        el.querySelector('#up').onchange=async(e)=>{const files=[...e.target.files]; for(const f of files){const b=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); p.attachments.unshift({id:id(),name:f.name,size:f.size,type:f.type,added:new Date().toISOString(),data:b});} save(); V.render_My_Profile(el);};
-      },
-      render_Company_Holidays(el){ el.innerHTML=`<div class="card"><h3>Upcoming Holidays</h3><div class="table"><table><thead><tr><th>Date</th><th>Holiday</th></tr></thead><tbody>${S.holidays.filter(h=>new Date(h.date)>=new Date()).sort((a,b)=>a.date.localeCompare(b.date)).map(h=>`<tr><td>${fmt(h.date)}</td><td>${h.title}</td></tr>`).join('')||`<tr><td colspan="2">No upcoming holidays.</td></tr>`}</tbody></table></div></div>`; }
-    };
-
-    function openThread(id){
-      const it=S.inbox.find(i=>i.id===id); if(!it) return;
-      const salary = it.type==='salary' && it.amount ? `<p><b>Requested Amount:</b> LKR ${Number(it.amount).toLocaleString('en-LK')}</p>`:'';
-      const bubbles=(it.replies||[]).map(r=>`<div style="margin:8px 0"><div class="chip ${r.from==='admin'?'Approved':'Pending'}">${r.from}</div><div>${r.body}</div><div class="note">${fmtDT(r.date)}</div></div>`).join('');
-      openDrawer('Conversation', `<div class="card"><h3>${it.subject} <span class="chip ${it.status}" style="margin-left:8px">${it.status}</span></h3><p class="note">From: ${staffName(it.staffId)} • ${fmtDT(it.createdAt)}</p>${salary}<div>${bubbles||'<p class="note">No replies yet.</p>'}</div><form id="rep" style="margin-top:10px"><label>Reply</label><textarea id="rbody" rows="3"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" type="submit">Send</button><button type="button" class="btn secondary st" data-s="Approved">Approve</button><button type="button" class="btn secondary st" data-s="Pending">Pend</button><button type="button" class="btn danger st" data-s="Rejected">Reject</button></div></form></div>`);
-      document.getElementById('rep').onsubmit=(e)=>{e.preventDefault(); const txt=document.getElementById('rbody').value.trim(); if(!txt) return; it.replies ||= []; it.replies.push({from:'admin',body:txt,date:new Date().toISOString()}); save(); openThread(id);};
-      document.querySelectorAll('.st').forEach(b=>b.onclick=()=>{it.status=b.dataset.s; save(); openThread(id);});
-    }
-
-    function openProfile(sid){
-      const p=S.profiles[sid] ||= {info:{},attachments:[],performance:{points:0},pthist:[]};
-      const docs=(p.attachments||[]).map(d=>`<tr><td>${d.name}</td><td>${Math.round((d.size||0)/1024)} KB</td><td>${fmtDT(d.added)}</td><td><a href="${d.data}" download="${d.name}" class="btn secondary">Download</a></td></tr>`).join('')||`<tr><td colspan="4">No documents.</td></tr>`;
-      openDrawer('Profile — '+staffName(sid), `<div class="card"><h3>Staff Details</h3><form id="pe" class="grid g2" novalidate><div><label>Full Name</label><input id="p1" value="${p.info.fullName||''}"></div><div><label>Email</label><input id="p2" type="email" value="${p.info.email||''}"></div><div><label>Phone</label><input id="p3" value="${p.info.phone||''}"></div><div><label>Address</label><input id="p4" value="${p.info.address||''}"></div><div><label>ID No</label><input id="p5" value="${p.info.idNo||''}"></div><div><label>Date of Birth</label><input id="p6" type="date" value="${p.info.dob||''}"></div><div style="grid-column:1/-1"><label>Qualifications</label><input id="p7" value="${p.info.qualifications||''}"></div><div style="grid-column:1/-1"><label>Remarks</label><input id="p8" value="${p.info.remarks||''}"></div><button class="btn" style="grid-column:1/-1">Save</button></form></div><div class="card"><h3>Documents</h3><input id="up2" type="file" multiple><div class="table" style="margin-top:8px"><table><thead><tr><th>Name</th><th>Size</th><th>Added</th><th></th></tr></thead><tbody>${docs}</tbody></table></div></div><div class="card"><h3>Rewards</h3><p><b>Total Points:</b> ${p.performance.points||0}</p><div class="table"><table><thead><tr><th>Date</th><th>Points</th><th>Reason</th></tr></thead><tbody>${(p.pthist||[]).map(h=>`<tr><td>${fmtDT(h.date)}</td><td>${h.points}</td><td>${h.reason}</td></tr>`).join('')||`<tr><td colspan="3">No rewards yet.</td></tr>`}</tbody></table></div></div>`);
-      document.getElementById('pe').onsubmit=(e)=>{e.preventDefault(); p.info.fullName=document.getElementById('p1').value; p.info.email=document.getElementById('p2').value; p.info.phone=document.getElementById('p3').value; p.info.address=document.getElementById('p4').value; p.info.idNo=document.getElementById('p5').value; p.info.dob=document.getElementById('p6').value; p.info.qualifications=document.getElementById('p7').value; p.info.remarks=document.getElementById('p8').value; save(); alert('Profile saved.');};
-      document.getElementById('up2').onchange=async(e)=>{const files=[...e.target.files]; for(const f of files){const b=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); p.attachments.unshift({id:id(),name:f.name,size:f.size,type:f.type,added:new Date().toISOString(),data:b});} save(); openProfile(sid);};
-    }
-
-    // Init
+  // ===== I. INIT =====
+  function init(){
     load();
-    // Auto-bootstrap from webhook on fresh devices
-    (async function initialCloudBootstrap(){
-      try{
-        if((S.staff||[]).length<=3 && S.settings && S.settings.webhook){
-          const r = await fetch(S.settings.webhook,{method:'GET'});
-          if(r.ok){
-            const data = await r.json();
-            if(data && typeof data==='object' && Array.isArray(data.staff) && data.staff.length>(S.staff||[]).length){
-              S = data; save();
-            }
-          }
-        }
-      }catch(e){/* ignore */}
-    })();
-    const pref=localStorage.getItem('mls_theme')||'light'; document.body.className=pref; DOM.theme.checked = pref==='dark';
-  })();
-  </script>
+    // populate centre select
+    DOM.site.innerHTML = '<option value="">(choose)</option>' + (S.settings.centres||[]).map(c=>`<option>${c}</option>`).join('');
+    bindGlobal();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
 </body>
 </html>
