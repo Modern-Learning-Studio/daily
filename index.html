@@ -1090,24 +1090,32 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
     DOM.dclose.onclick = closeDrawer; DOM.overlay.onclick = closeDrawer;
     DOM.testWebhook.onclick = testWebhook;
 
-    DOM.sync.onclick = async () => {
-      const url=S.settings.webhook; if(!url) return alert('Webhook URL is not set.');
-      try{
-        if(url.endsWith('.json')){
-          const r = await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
-          if(!r.ok) throw new Error(r.status+' '+r.statusText);
-          alert('Synced to Firebase.');
-        }else{
-          const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
-          if(r.type==='opaque' || r.ok){ alert('Sync sent (response hidden by CORS is normal).'); } else { throw new Error(r.status+' '+r.statusText); }
-        }
-      }catch(e){ alert('Sync failed: '+e.message); }
-    };
+    
+DOM.sync && (DOM.sync.onclick = async () => {
+  const url = S?.settings?.webhook;
+  if(!url){ alert('Webhook URL is not set in Settings.'); return; }
+  try{
+    const isFirebase = /\.json(\?|$)/.test(url);
+    if(isFirebase){
+      const r = await fetch(url,{ method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(S) });
+      if(!r.ok) throw new Error(r.status+' '+r.statusText);
+      alert('Synced to Firebase ✓');
+      return;
+    }
+    // Generic JSON POST; server might be opaque due to CORS
+    const r = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(S) });
+    if(r.ok || r.type==='opaque'){ alert('Sync sent ✓'); } else { throw new Error(r.status+' '+r.statusText); }
+  }catch(e){ alert('Sync failed: '+e.message); }
+});
 
-    DOM.loadCloud.onclick = async () => {
-      const loaded = await fetchCloudState(); alert(loaded?'Loaded latest data.':'Could not load.');
-      if(user) show((user.role==='Admin')? 'Today' : 'My Dashboard');
-    };
+
+    
+DOM.loadCloud && (DOM.loadCloud.onclick = async () => {
+  const res = await fetchCloudState();
+  if(res){ alert('Loaded from Webhook ✓'); if(user){ renderHeader(); renderTabs(); } else { populateCentreSelect(); } }
+  else { alert('Could not load — check the Webhook URL and CORS.'); }
+});
+
   }
 
   // ===== H. LOGIN HANDLER =====
@@ -1156,6 +1164,68 @@ footer{padding:30px 16px;color:var(--muted);text-align:center}
 
   document.addEventListener('DOMContentLoaded', init);
 })();
+
+
+DOM.frm && (DOM.frm.onsubmit = async function(e){
+  e.preventDefault();
+  if(DOM.err) DOM.err.textContent='';
+  const centre = DOM.site && DOM.site.value || '';
+  if(!centre){ if(DOM.err) DOM.err.textContent = 'Please select a centre.'; return; }
+  const pinRaw = (DOM.pin && DOM.pin.value || '').normalize('NFKC').replace(/\D+/g,'');
+  if(!pinRaw){ if(DOM.err) DOM.err.textContent = 'Enter PIN.'; return; }
+
+  function doLogin(u){
+    user = u; worksite = centre;
+    (S.logins ||= []).push({id: (crypto.randomUUID?crypto.randomUUID():('id_'+Date.now())), at: new Date().toISOString(), staffId: u.id||'admin', centre});
+    save();
+    if(DOM.login) DOM.login.classList.add('hidden');
+    if(DOM.app) DOM.app.classList.remove('hidden');
+    if(typeof renderHeader==='function') renderHeader();
+    if(typeof renderTabs==='function') renderTabs();
+    if(typeof show==='function') show(user.role==='Admin' ? 'Today' : 'My Dashboard');
+  }
+
+  const matchPIN = (p)=>{
+    const pin = String(p||'').normalize('NFKC').replace(/\D+/g,'');
+    if(pin==='0000') return { id:'admin', name:'Admin', role:'Admin', active:true };
+    if(S && Array.isArray(S.staff)){
+      for(const s of S.staff){
+        const sp = String(s.pin||'').normalize('NFKC').replace(/\D+/g,'');
+        if(sp===pin && s.active!==false) return { id:s.id, name:s.name, role:'Staff', active:true };
+      }
+    }
+    return null;
+  };
+
+  let u = matchPIN(pinRaw);
+  if(u){ doLogin(u); return; }
+
+  await fetchCloudState();
+  u = matchPIN(pinRaw);
+  if(u){ doLogin(u); return; }
+
+  if(DOM.err) DOM.err.textContent = 'Invalid PIN or inactive account. Ensure admin synced to webhook, then try again.';
+});
+    
+
+
+DOM.testWebhook && (DOM.testWebhook.onclick = async () => {
+  const url=S?.settings?.webhook;
+  if(!url){ alert('Webhook URL is empty. Set it in Settings.'); return; }
+  try{
+    const r = await fetch(url,{method:'GET'});
+    if(r.ok){
+      const ct=r.headers.get('content-type')||'';
+      if(ct.includes('application/json')){ await r.json(); alert('Webhook reachable ✓ (JSON)'); }
+      else { alert('Webhook reachable ✓'); }
+    }else{
+      alert('Webhook responded '+r.status+' '+r.statusText);
+    }
+  }catch(e){
+    alert('Could not reach webhook: '+e.message);
+  }
+});
+
 </script>
 </body>
 </html>
