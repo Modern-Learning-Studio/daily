@@ -590,7 +590,13 @@
 
                 // 2. Fallback to injected config (for original environment)
                 if (!firebaseConfig && typeof __firebase_config !== 'undefined') {
-                    firebaseConfig = JSON.parse(__firebase_config);
+                    try {
+                       if (__firebase_config && __firebase_config.trim() !== '') {
+                           firebaseConfig = JSON.parse(__firebase_config);
+                       }
+                    } catch(e) {
+                        console.error("Failed to parse injected __firebase_config", e);
+                    }
                 }
 
                 // 3. If no config, show setup screen
@@ -600,11 +606,11 @@
                     return; // Stop initialization until config is provided
                 }
 
-                const firebaseApp = initializeApp(firebaseConfig);
-                db = getFirestore(firebaseApp);
-                auth = getAuth(firebaseApp);
-
                 try {
+                    const firebaseApp = initializeApp(firebaseConfig);
+                    db = getFirestore(firebaseApp);
+                    auth = getAuth(firebaseApp);
+
                     const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                     if (authToken) {
                         await signInWithCustomToken(auth, authToken);
@@ -616,7 +622,31 @@
                 } catch (error) {
                     console.error("Firebase initialization failed:", error);
                     app.classList.remove('loading');
-                    app.innerHTML = `<h1>Could not connect to the database.</h1><p>Error: ${error.message}</p><p>Please check your Firebase configuration and security rules.</p>`;
+                    const errorHtml = `
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 1rem;">
+                            <div class="card" style="max-width: 500px; text-align: center;">
+                                <h1>Connection Error</h1>
+                                <p class="mb-4 text-light">Could not connect to the database. This usually means the Firebase configuration is incorrect or the app's domain is not authorized.</p>
+                                <p><strong>Error:</strong><br><code style="background: #eee; padding: 2px 4px; border-radius: 4px; color: var(--danger-color);">${error.message}</code></p>
+                                <div style="text-align: left; margin-top: 1.5rem;">
+                                    <h3 style="margin-bottom: 0.5rem;">Troubleshooting Steps:</h3>
+                                    <ol style="padding-left: 1.5rem; font-size: 0.9rem;" class="text-light">
+                                        <li>Go to your Firebase Console -> Project Settings.</li>
+                                        <li>Copy the <strong>entire</strong> <code>firebaseConfig</code> object.</li>
+                                        <li>Click "Reset Configuration" below.</li>
+                                        <li>Paste the correct object into the setup screen.</li>
+                                        <li>Ensure your website's domain is listed under <strong>Authentication -> Settings -> Authorized domains</strong>.</li>
+                                    </ol>
+                                </div>
+                                <button id="reset-config-btn" class="btn btn-danger" style="margin-top: 1.5rem;">Reset & Start Over</button>
+                            </div>
+                        </div>
+                    `;
+                    app.innerHTML = errorHtml;
+                    $('#reset-config-btn').addEventListener('click', () => {
+                        localStorage.removeItem(FIREBASE_CONFIG_KEY);
+                        location.reload();
+                    });
                 }
             },
 
@@ -2536,4 +2566,4 @@
 
     </script>
 </body>
-</html>
+</ht
