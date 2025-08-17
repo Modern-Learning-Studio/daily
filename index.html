@@ -54,7 +54,18 @@
             transition: opacity var(--transition-speed) ease-in-out;
         }
         
-        #app.loading {
+        #app.loading::before {
+            content: 'Loading...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: var(--text-color-light);
+            z-index: 100;
+        }
+
+        #app.loading > * {
             opacity: 0;
         }
 
@@ -108,6 +119,10 @@
             text-decoration: none;
             white-space: nowrap;
         }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         .btn:focus-visible {
             outline: 2px solid var(--primary-color);
             outline-offset: 2px;
@@ -117,18 +132,18 @@
             color: white;
             border-color: var(--primary-color);
         }
-        .btn-primary:hover { background-color: var(--primary-color-dark); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-color-dark); }
         .btn-secondary {
             background-color: var(--secondary-color);
             color: var(--text-color);
             border-color: var(--border-color);
         }
-        .btn-secondary:hover { background-color: #e9ebf0; }
+        .btn-secondary:hover:not(:disabled) { background-color: #e9ebf0; }
         .btn-danger {
             background-color: var(--danger-color);
             color: white;
         }
-        .btn-danger:hover { background-color: #bf2600; }
+        .btn-danger:hover:not(:disabled) { background-color: #bf2600; }
         .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
 
         /* Form Elements */
@@ -422,7 +437,7 @@
 
     <div id="app" class="loading">
         <!-- Login Screen -->
-        <div id="login-screen">
+        <div id="login-screen" class="hidden">
             <div id="login-card" class="card">
                 <h1>MLS DAILY</h1>
                 <form id="login-form">
@@ -478,9 +493,15 @@
 
     </div>
 
+    <!-- Firebase SDKs -->
     <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, writeBatch, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
         // --- CONSTANTS & CONFIG ---
-        const STATE_KEY = 'MLS_DAILY_STATE_V4';
+        const STATE_KEY = 'MLS_DAILY_STATE_V4_SESSION'; // Changed to session storage for non-persistent local data
         const ADMIN_PIN = '0000';
 
         // --- DOM ELEMENTS ---
@@ -503,25 +524,123 @@
         const drawerTitle = $('#drawer-title');
         const drawerBody = $('#drawer-body');
 
-        // --- STATE MANAGEMENT ---
-        let state = {};
+        // --- FIREBASE & GLOBAL STATE ---
+        let db, auth, appId;
+        let unsubscribeListeners = []; // To detach listeners on logout
+        
+        // This is now a local cache, the source of truth is Firestore
+        let state = {
+            settings: {},
+            staff: [],
+            profiles: {},
+            sessions: [],
+            leaves: [],
+            holidays: [],
+            notices: [],
+            shifts: [],
+            inbox: [],
+            salaryRequests: [],
+            currentUser: null,
+            currentCentre: null,
+        };
 
+        // --- STATE MANAGEMENT (Now with FIREBASE) ---
         const stateManager = {
-            getState: () => JSON.parse(localStorage.getItem(STATE_KEY)),
-            saveState: () => localStorage.setItem(STATE_KEY, JSON.stringify(state)),
-            init() {
-                const storedState = this.getState();
-                if (storedState) {
-                    state = storedState;
-                } else {
-                    this.seedData();
-                    this.saveState();
-                    showToast("Welcome! App initialized with sample data. Admin PIN: 0000, Staff PINs: 1001, 1002.", 'success', 10000);
+            getSessionState: () => JSON.parse(sessionStorage.getItem(STATE_KEY)),
+            saveSessionState: () => sessionStorage.setItem(STATE_KEY, JSON.stringify({
+                currentUser: state.currentUser,
+                currentCentre: state.currentCentre
+            })),
+            clearSessionState: () => sessionStorage.removeItem(STATE_KEY),
+            
+            async initFirebase() {
+                // These variables are expected to be provided by the environment
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                if (!firebaseConfig) {
+                    app.innerHTML = '<h1>Firebase configuration is missing.</h1>';
+                    console.error("Firebase config is missing.");
+                    return;
+                }
+
+                const firebaseApp = initializeApp(firebaseConfig);
+                db = getFirestore(firebaseApp);
+                auth = getAuth(firebaseApp);
+
+                try {
+                    if (authToken) {
+                        await signInWithCustomToken(auth, authToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    console.log("Firebase auth successful.");
+                    await this.loadInitialData();
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    app.innerHTML = '<h1>Could not connect to the database.</h1>';
                 }
             },
-            seedData() {
+
+            async loadInitialData() {
+                const basePath = `artifacts/${appId}/public/data`;
+                // Check if data needs to be seeded
+                const settingsDoc = await getDoc(doc(db, `${basePath}/config/settings`));
+                if (!settingsDoc.exists()) {
+                    showToast('First time setup. Seeding initial data to database...', 'info', 5000);
+                    await this.seedDataToFirestore();
+                }
+
+                // Attach real-time listeners
+                const collectionsToSync = [
+                    'staff', 'sessions', 'leaves', 'holidays', 'notices', 'shifts', 'inbox', 'salaryRequests'
+                ];
+
+                // Detach previous listeners if any
+                unsubscribeListeners.forEach(unsub => unsub());
+                unsubscribeListeners = [];
+
+                const settingsUnsub = onSnapshot(doc(db, `${basePath}/config/settings`), (doc) => {
+                    state.settings = doc.data() || {};
+                    // Re-render if a view depends on settings
+                    if(state.currentUser) render.view($('.tab-btn.active')?.dataset.tab || 'Today');
+                });
+                unsubscribeListeners.push(settingsUnsub);
+
+                collectionsToSync.forEach(coll => {
+                    const q = query(collection(db, `${basePath}/${coll}`));
+                    const unsub = onSnapshot(q, (snapshot) => {
+                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        state[coll] = data;
+                        // For profiles, we'll map it to an object for easy lookup
+                        if (coll === 'staff') {
+                            state.profiles = data.reduce((acc, staff) => {
+                                acc[staff.id] = staff.profile || {};
+                                return acc;
+                            }, {});
+                        }
+                        // Re-render the current view to show updated data
+                        if(state.currentUser) render.view($('.tab-btn.active')?.dataset.tab || 'Today');
+                    });
+                    unsubscribeListeners.push(unsub);
+                });
+
+                // Once initial data structure is ready, check for session
+                const session = this.getSessionState();
+                if (session && session.currentUser) {
+                    state.currentUser = session.currentUser;
+                    state.currentCentre = session.currentCentre;
+                    render.app();
+                } else {
+                    render.login();
+                }
+                app.classList.remove('loading');
+            },
+
+            async seedDataToFirestore() {
                 const today = utils.today();
-                state = {
+                const seed = {
                     settings: {
                         org: "MLS Innovations",
                         centres: ["MLS - Colombo 4", "Finnish Preschool - Park Road", "Forest School - Piliyandala", "SenSoMo - One Galle Face", "Forest School - Cape Weligama"],
@@ -531,32 +650,45 @@
                         webhook: "",
                     },
                     staff: [
-                        { id: "1001", name: "John Doe", role: "Developer", pin: "1001", defaultWorksite: "MLS - Colombo 4", joinDate: "2023-01-10", active: true },
-                        { id: "1002", name: "Jane Smith", role: "Designer", pin: "1002", defaultWorksite: "Finnish Preschool - Park Road", joinDate: "2023-03-15", active: true },
+                        { id: "1001", name: "John Doe", role: "Developer", pin: "1001", defaultWorksite: "MLS - Colombo 4", joinDate: "2023-01-10", active: true, profile: { phone: "123-456-7890", email: "john.doe@example.com", performance: { points: 120 }, documents: [] } },
+                        { id: "1002", name: "Jane Smith", role: "Designer", pin: "1002", defaultWorksite: "Finnish Preschool - Park Road", joinDate: "2023-03-15", active: true, profile: { phone: "098-765-4321", email: "jane.smith@example.com", performance: { points: 65 }, documents: [] } },
                     ],
-                    profiles: {
-                        "1001": { phone: "123-456-7890", email: "john.doe@example.com", performance: { points: 120 }, documents: [] },
-                        "1002": { phone: "098-765-4321", email: "jane.smith@example.com", performance: { points: 65 }, documents: [] },
-                    },
                     sessions: [
-                        { id: `s_${Date.now()}_1001`, staffId: "1001", date: today, centre: "MLS - Colombo 4", clockIn: `${today}T09:00:00`, clockOut: null, breaks: [] },
-                        { id: `s_${Date.now()}_1002`, staffId: "1002", date: today, centre: "Finnish Preschool - Park Road", clockIn: `${today}T09:30:00`, clockOut: null, breaks: [] },
+                        { staffId: "1001", date: today, centre: "MLS - Colombo 4", clockIn: `${today}T09:00:00`, clockOut: null, breaks: [] },
+                        { staffId: "1002", date: today, centre: "Finnish Preschool - Park Road", clockIn: `${today}T09:30:00`, clockOut: null, breaks: [] },
                     ],
                     leaves: [
-                        { id: `l_${Date.now()}`, staffId: "1002", date: today, type: "Short", minutes: 60, reason: "Appointment", status: "Pending", appliedAt: new Date().toISOString() }
+                        { staffId: "1002", date: today, type: "Short", minutes: 60, reason: "Appointment", status: "Pending", appliedAt: new Date().toISOString() }
                     ],
                     holidays: [
-                        { id: `h_${Date.now()}`, date: "2025-08-20", title: "Poya Day" }
+                        { date: "2025-08-20", title: "Poya Day" }
                     ],
                     notices: [
-                        { id: `n_${Date.now()}`, title: "Welcome!", body: "Welcome to the new MLS DAILY portal.", centre: "All", createdAt: new Date().toISOString() }
+                        { title: "Welcome!", body: "Welcome to the new MLS DAILY portal.", centre: "All", createdAt: new Date().toISOString() }
                     ],
-                    shifts: [],
-                    inbox: [],
-                    salaryRequests: [],
-                    currentUser: null,
-                    currentCentre: null,
                 };
+
+                const batch = writeBatch(db);
+                const basePath = `artifacts/${appId}/public/data`;
+
+                // Set settings
+                batch.set(doc(db, `${basePath}/config/settings`), seed.settings);
+
+                // Add staff (using their ID as document ID)
+                seed.staff.forEach(s => {
+                    const staffDocRef = doc(db, `${basePath}/staff`, s.id);
+                    batch.set(staffDocRef, s);
+                });
+                
+                // Add other collections
+                ['sessions', 'leaves', 'holidays', 'notices'].forEach(coll => {
+                    seed[coll].forEach(item => {
+                        const newDocRef = doc(collection(db, `${basePath}/${coll}`));
+                        batch.set(newDocRef, item);
+                    });
+                });
+
+                await batch.commit();
             },
         };
 
@@ -617,22 +749,24 @@
         // --- UI RENDERING ---
         const render = {
             login() {
-                centreSelect.innerHTML = state.settings.centres
-                    .map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`)
-                    .join('');
+                if (state.settings.centres && state.settings.centres.length > 0) {
+                    centreSelect.innerHTML = state.settings.centres
+                        .map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`)
+                        .join('');
+                } else {
+                     centreSelect.innerHTML = '<option>Loading centres...</option>';
+                }
                 loginScreen.classList.remove('hidden');
                 mainApp.classList.add('hidden');
             },
             app() {
                 let user;
-                // Handle Admin user separately as they are not in the staff list
                 if (state.currentUser.role === 'Admin') {
                     user = { name: 'Admin' };
                 } else {
                     user = state.staff.find(s => s.id === state.currentUser.id);
                 }
 
-                // Safety check in case a logged-in user was deleted
                 if (!user) {
                     showToast('Could not find your user profile. Logging out.', 'error');
                     events.auth.logout();
@@ -648,7 +782,6 @@
                 this.tabs();
                 loginScreen.classList.add('hidden');
                 mainApp.classList.remove('hidden');
-                // Trigger render for the initial active tab
                 const activeTab = state.currentUser.role === 'Admin' ? 'Today' : 'My Dashboard';
                 this.view(activeTab);
             },
@@ -670,7 +803,7 @@
                 `).join('');
             },
             view(tabName, options = {}) {
-                // Update active tab button
+                if (!tabName) return;
                 $$('.tab-btn').forEach(btn => btn.classList.remove('active'));
                 $(`.tab-btn[data-tab="${tabName}"]`)?.classList.add('active');
                 
@@ -704,16 +837,12 @@
                 }
             },
             attachViewListeners(tabName) {
-                // Attach event listeners specific to the rendered view
-                // This is a more robust way to handle dynamic content
                 const viewContent = $('.view-content');
                 if (!viewContent) return;
 
                 const handlers = {
                     'Today': () => {
-                        $('#today-centre-filter')?.addEventListener('change', e => {
-                            this.view('Today');
-                        });
+                        $('#today-centre-filter')?.addEventListener('change', () => this.view('Today'));
                     },
                     'Attendance': () => {
                         $('#run-attendance-report')?.addEventListener('click', () => {
@@ -750,8 +879,8 @@
                            $('#admin-short-leave-minutes-group').classList.toggle('hidden', e.target.value !== 'Short');
                         });
                         viewContent.addEventListener('click', e => {
-                            if (e.target.matches('[data-action^="update-leave-"]')) {
-                                const [_, __, status, id] = e.target.dataset.action.split('-');
+                            if (e.target.matches('[data-action^="update-leave-status"]')) {
+                                const [_, __, ___, status, id] = e.target.dataset.action.split('-');
                                 events.leaves.updateStatus(id, status);
                             }
                         });
@@ -766,8 +895,10 @@
                     },
                     'Inbox': () => {
                         viewContent.addEventListener('click', e => {
-                            const action = e.target.dataset.action;
-                            const id = e.target.dataset.id;
+                            const button = e.target.closest('button[data-action]');
+                            if (!button) return;
+                            const action = button.dataset.action;
+                            const id = button.dataset.id;
                             if (action && id) {
                                 const [type, status, reqType] = action.split('-');
                                 if (type === 'update') {
@@ -828,7 +959,7 @@
             },
             profileDrawer(staffId) {
                 const staff = state.staff.find(s => s.id === staffId);
-                const profile = state.profiles[staffId] || {};
+                const profile = staff.profile || {};
                 const sessions = state.sessions.filter(s => s.staffId === staffId);
                 const totalMins = sessions.reduce((sum, s) => sum + utils.getWorkedMinutes(staffId, s.date), 0);
 
@@ -898,7 +1029,7 @@
                               <div class="form-group mb-0">
                                 <select id="today-centre-filter" class="form-control">
                                   <option value="All">All Centres</option>
-                                  ${state.settings.centres.map(c => `<option value="${utils.escapeHTML(c)}" ${selectedCentre === c ? 'selected' : ''}>${utils.escapeHTML(c)}</option>`).join('')}
+                                  ${(state.settings.centres || []).map(c => `<option value="${utils.escapeHTML(c)}" ${selectedCentre === c ? 'selected' : ''}>${utils.escapeHTML(c)}</option>`).join('')}
                                 </select>
                               </div>
                             </div>
@@ -1001,7 +1132,7 @@
                                       <label for="attendance-centre-filter">Centre</label>
                                       <select id="attendance-centre-filter" class="form-control">
                                           <option value="All">All Centres</option>
-                                          ${state.settings.centres.map(c => `<option value="${utils.escapeHTML(c)}" ${filters?.centre === c ? 'selected' : ''}>${utils.escapeHTML(c)}</option>`).join('')}
+                                          ${(state.settings.centres || []).map(c => `<option value="${utils.escapeHTML(c)}" ${filters?.centre === c ? 'selected' : ''}>${utils.escapeHTML(c)}</option>`).join('')}
                                       </select>
                                   </div>
                                   <div class="self-end">
@@ -1041,7 +1172,7 @@
                                     <div class="form-group">
                                         <label for="shift-centre">Centre</label>
                                         <select id="shift-centre" class="form-control" required>
-                                            ${state.settings.centres.map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
+                                            ${(state.settings.centres || []).map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -1114,7 +1245,7 @@
                                   <div class="form-group">
                                       <label for="staff-centre">Default Centre</label>
                                       <select id="staff-centre" class="form-control" required>
-                                          ${state.settings.centres.map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
+                                          ${(state.settings.centres || []).map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
                                       </select>
                                   </div>
                                   <button type="submit" class="btn btn-primary">Add Staff</button>
@@ -1195,9 +1326,9 @@
                                                     <td>${l.type}${l.type === 'Short' ? ` (${l.minutes}m)` : ''}</td>
                                                     <td><span class="status-pill ${l.status.toLowerCase()}">${l.status}</span></td>
                                                     <td class="flex flex-wrap gap-1">
-                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-Approved-${l.id}">Approve</button>
-                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-Pending-${l.id}">Pend</button>
-                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-Rejected-${l.id}">Reject</button>
+                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-status-Approved-${l.id}">Approve</button>
+                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-status-Pending-${l.id}">Pend</button>
+                                                        <button class="btn btn-secondary btn-sm" data-action="update-leave-status-Rejected-${l.id}">Reject</button>
                                                     </td>
                                                 </tr>
                                             `).join('')}
@@ -1327,7 +1458,7 @@
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     ${state.staff.map(s => `
                                         <div class="kpi-card">
-                                            <div class="value">${state.profiles[s.id]?.performance?.points || 0}</div>
+                                            <div class="value">${s.profile?.performance?.points || 0}</div>
                                             <div class="label">${utils.escapeHTML(s.name)}</div>
                                         </div>
                                     `).join('')}
@@ -1345,29 +1476,29 @@
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div class="form-group">
                                         <label for="setting-org">Organization</label>
-                                        <input type="text" id="setting-org" class="form-control" value="${utils.escapeHTML(settings.org)}">
+                                        <input type="text" id="setting-org" class="form-control" value="${utils.escapeHTML(settings.org || '')}">
                                     </div>
                                     <div class="form-group">
                                         <label for="setting-webhook">Webhook URL</label>
-                                        <input type="url" id="setting-webhook" class="form-control" value="${utils.escapeHTML(settings.webhook)}">
+                                        <input type="url" id="setting-webhook" class="form-control" value="${utils.escapeHTML(settings.webhook || '')}">
                                     </div>
                                     <div class="form-group">
                                         <label for="setting-break">Daily Break (mins)</label>
-                                        <input type="number" id="setting-break" class="form-control" value="${settings.breakMins}">
+                                        <input type="number" id="setting-break" class="form-control" value="${settings.breakMins || 30}">
                                     </div>
                                     <div class="form-group">
                                         <label for="setting-target">Target Work (mins)</label>
-                                        <input type="number" id="setting-target" class="form-control" value="${settings.targetMins}">
+                                        <input type="number" id="setting-target" class="form-control" value="${settings.targetMins || 480}">
                                     </div>
                                     <div class="form-group">
                                         <label for="setting-halfday">Half-day Cap (mins)</label>
-                                        <input type="number" id="setting-halfday" class="form-control" value="${settings.halfDayMins}">
+                                        <input type="number" id="setting-halfday" class="form-control" value="${settings.halfDayMins || 240}">
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label>Centres</label>
                                     <div id="centres-list" class="space-y-2 mb-2">
-                                        ${settings.centres.map(c => `
+                                        ${(settings.centres || []).map(c => `
                                             <div class="flex items-center justify-between p-2 bg-secondary rounded-lg">
                                                 <span>${utils.escapeHTML(c)}</span>
                                                 <button type="button" class="btn btn-danger btn-sm" data-action="remove-centre" data-centre="${utils.escapeHTML(c)}">&times;</button>
@@ -1421,7 +1552,7 @@
                                         <label for="notice-centre">Centre</label>
                                         <select id="notice-centre" class="form-control" required>
                                             <option value="All">All Centres</option>
-                                            ${state.settings.centres.map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
+                                            ${(state.settings.centres || []).map(c => `<option value="${utils.escapeHTML(c)}">${utils.escapeHTML(c)}</option>`).join('')}
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Post Notice</button>
@@ -1459,7 +1590,7 @@
                         uniqueDates.forEach(date => {
                             const workedMins = utils.getWorkedMinutes(staff.id, date);
                             totalMins += workedMins;
-                            otMins += Math.max(0, workedMins - state.settings.targetMins);
+                            otMins += Math.max(0, workedMins - (state.settings.targetMins || 480));
                         });
 
                         return {
@@ -1493,7 +1624,8 @@
                 staff: {
                     dashboard() {
                         const staffId = state.currentUser.id;
-                        const profile = state.profiles[staffId] || {};
+                        const staffMember = state.staff.find(s => s.id === staffId);
+                        const profile = staffMember?.profile || {};
                         const currentMonth = new Date().getMonth();
                         const currentYear = new Date().getFullYear();
 
@@ -1557,7 +1689,6 @@
 
                         const canClockIn = !todaySession;
                         const canClockOut = todaySession && !todaySession.clockOut;
-                        // Simplified break logic for this implementation
                         const canStartBreak = todaySession && !todaySession.breaks.some(b => b.start && !b.end);
                         const canEndBreak = todaySession && todaySession.breaks.some(b => b.start && !b.end);
 
@@ -1754,7 +1885,7 @@
                     myProfile() {
                         const staffId = state.currentUser.id;
                         const staff = state.staff.find(s => s.id === staffId);
-                        const profile = state.profiles[staffId] || {};
+                        const profile = staff?.profile || {};
                         return `
                             <div class="card max-w-2xl mx-auto">
                                 <h2 class="text-xl font-bold mb-4">My Profile</h2>
@@ -1811,7 +1942,7 @@
                     if (user) {
                         state.currentUser = { id: user.id, role: role };
                         state.currentCentre = centre;
-                        stateManager.saveState();
+                        stateManager.saveSessionState();
                         render.app();
                     } else {
                         loginError.style.display = 'block';
@@ -1821,7 +1952,7 @@
                 logout() {
                     state.currentUser = null;
                     state.currentCentre = null;
-                    stateManager.saveState();
+                    stateManager.clearSessionState();
                     render.login();
                 }
             },
@@ -1853,49 +1984,19 @@
                             }
                             break;
                         case 'load-webhook':
-                            if (!webhookUrl) return showToast('Webhook URL not set in Settings.', 'error');
-                            if (!confirm('This will replace your local data. Are you sure?')) return;
-                            try {
-                                const response = await fetch(webhookUrl);
-                                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                                const data = await response.json();
-                                // Basic validation
-                                if (data.settings && data.staff) {
-                                    state = data;
-                                    stateManager.saveState();
-                                    showToast('Data loaded successfully from webhook.', 'success');
-                                    // Full reload to reflect changes
-                                    location.reload();
-                                } else {
-                                    throw new Error('Invalid data structure from webhook.');
-                                }
-                            } catch (err) {
-                                showToast(`Failed to load from webhook: ${err.message}`, 'error');
-                            }
+                            showToast('This feature is disabled in Firebase mode.', 'warning');
                             break;
                         case 'sync-webhook':
-                            if (!webhookUrl) return showToast('Webhook URL not set in Settings.', 'error');
-                            try {
-                                const method = webhookUrl.endsWith('.json') ? 'PUT' : 'POST';
-                                const response = await fetch(webhookUrl, {
-                                    method: method,
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(state),
-                                });
-                                showToast('Sync signal sent to webhook.', 'success');
-                            } catch (err) {
-                                showToast(`Sync to webhook failed: ${err.message}`, 'error');
-                            }
+                            showToast('This feature is disabled in Firebase mode. Data syncs in real-time.', 'warning');
                             break;
                     }
                 }
             },
             shifts: {
-                add(e) {
+                async add(e) {
                     e.preventDefault();
                     const form = e.target;
                     const newShift = {
-                        id: `sh_${Date.now()}`,
                         date: form.querySelector('#shift-date').value,
                         centre: form.querySelector('#shift-centre').value,
                         staffId: form.querySelector('#shift-staff').value,
@@ -1903,22 +2004,27 @@
                         end: form.querySelector('#shift-end').value,
                         notes: form.querySelector('#shift-notes').value,
                     };
-                    state.shifts.push(newShift);
-                    stateManager.saveState();
-                    showToast('Shift added successfully.', 'success');
-                    render.view('Shift Planner');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/shifts`), newShift);
+                        showToast('Shift added successfully.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                delete(id) {
+                async delete(id) {
                     if (confirm('Are you sure you want to delete this shift?')) {
-                        state.shifts = state.shifts.filter(s => s.id !== id);
-                        stateManager.saveState();
-                        showToast('Shift deleted.', 'success');
-                        render.view('Shift Planner');
+                        try {
+                            await deleteDoc(doc(db, `artifacts/${appId}/public/data/shifts`, id));
+                            showToast('Shift deleted.', 'success');
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
                     }
                 }
             },
             staff: {
-                add(e) {
+                async add(e) {
                     e.preventDefault();
                     const form = e.target;
                     const id = form.querySelector('#staff-id').value;
@@ -1933,31 +2039,36 @@
                         defaultWorksite: form.querySelector('#staff-centre').value,
                         joinDate: utils.today(),
                         active: true,
+                        profile: { phone: "", email: "", performance: { points: 0 }, documents: [] }
                     };
-                    state.staff.push(newStaff);
-                    // Create a blank profile
-                    state.profiles[id] = { phone: "", email: "", performance: { points: 0 }, documents: [] };
-                    stateManager.saveState();
-                    showToast('Staff added successfully.', 'success');
-                    render.view('Staff');
-                },
-                toggleStatus(id) {
-                    const staffMember = state.staff.find(s => s.id === id);
-                    if (staffMember) {
-                        staffMember.active = !staffMember.active;
-                        stateManager.saveState();
-                        showToast('Staff status updated.', 'success');
-                        render.view('Staff');
+                    try {
+                        await setDoc(doc(db, `artifacts/${appId}/public/data/staff`, id), newStaff);
+                        showToast('Staff added successfully.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
                     }
                 },
-                remove(id) {
+                async toggleStatus(id) {
+                    const staffMember = state.staff.find(s => s.id === id);
+                    if (staffMember) {
+                        try {
+                            const staffDocRef = doc(db, `artifacts/${appId}/public/data/staff`, id);
+                            await updateDoc(staffDocRef, { active: !staffMember.active });
+                            showToast('Staff status updated.', 'success');
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
+                    }
+                },
+                async remove(id) {
                     if (confirm('Are you sure? This will remove the staff and their profile permanently.')) {
-                        state.staff = state.staff.filter(s => s.id !== id);
-                        delete state.profiles[id];
-                        // Optionally, clean up other related data like sessions, leaves etc.
-                        stateManager.saveState();
-                        showToast('Staff removed.', 'success');
-                        render.view('Staff');
+                        try {
+                            await deleteDoc(doc(db, `artifacts/${appId}/public/data/staff`, id));
+                            showToast('Staff removed.', 'success');
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
                     }
                 },
                 viewProfile(id) {
@@ -1965,12 +2076,11 @@
                 }
             },
             leaves: {
-                adminSubmit(e) {
+                async adminSubmit(e) {
                     e.preventDefault();
                     const form = e.target;
                     const type = form.querySelector('#admin-leave-type').value;
                     const newLeave = {
-                        id: `l_${Date.now()}`,
                         staffId: form.querySelector('#admin-leave-staff').value,
                         date: form.querySelector('#admin-leave-date').value,
                         type,
@@ -1979,26 +2089,28 @@
                         status: 'Approved',
                         appliedAt: new Date().toISOString(),
                     };
-                    state.leaves.push(newLeave);
-                    stateManager.saveState();
-                    showToast('Leave submitted as Approved.', 'success');
-                    render.view('Leaves');
-                },
-                updateStatus(id, status) {
-                    const leave = state.leaves.find(l => l.id === id);
-                    if (leave) {
-                        leave.status = status;
-                        stateManager.saveState();
-                        showToast(`Leave status updated to ${status}.`, 'success');
-                        render.view('Leaves');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/leaves`), newLeave);
+                        showToast('Leave submitted as Approved.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
                     }
                 },
-                staffRequest(e) {
+                async updateStatus(id, status) {
+                    try {
+                        const leaveDocRef = doc(db, `artifacts/${appId}/public/data/leaves`, id);
+                        await updateDoc(leaveDocRef, { status });
+                        showToast(`Leave status updated to ${status}.`, 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
+                },
+                async staffRequest(e) {
                     e.preventDefault();
                     const form = e.target;
                     const type = form.querySelector('#leave-type-select').value;
                     const newLeave = {
-                        id: `l_${Date.now()}`,
                         staffId: state.currentUser.id,
                         date: form.querySelector('#leave-date').value,
                         type,
@@ -2007,99 +2119,122 @@
                         status: 'Pending',
                         appliedAt: new Date().toISOString(),
                     };
-                    state.leaves.push(newLeave);
-                    stateManager.saveState();
-                    showToast('Leave request submitted.', 'success');
-                    render.view('My Leaves');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/leaves`), newLeave);
+                        showToast('Leave request submitted.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 }
             },
             holidays: {
-                add(e) {
+                async add(e) {
                     e.preventDefault();
                     const form = e.target;
                     const newHoliday = {
-                        id: `h_${Date.now()}`,
                         date: form.querySelector('#holiday-date').value,
                         title: form.querySelector('#holiday-title').value,
                     };
-                    state.holidays.push(newHoliday);
-                    stateManager.saveState();
-                    showToast('Holiday added.', 'success');
-                    render.view('Holidays');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/holidays`), newHoliday);
+                        showToast('Holiday added.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                delete(id) {
+                async delete(id) {
                     if (confirm('Are you sure?')) {
-                        state.holidays = state.holidays.filter(h => h.id !== id);
-                        stateManager.saveState();
-                        showToast('Holiday deleted.', 'success');
-                        render.view('Holidays');
+                        try {
+                            await deleteDoc(doc(db, `artifacts/${appId}/public/data/holidays`, id));
+                            showToast('Holiday deleted.', 'success');
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
                     }
                 }
             },
             inbox: {
-                updateStatus(id, status, type) {
-                    const requestList = type === 'general' ? state.inbox : state.salaryRequests;
-                    const request = requestList.find(r => r.id === id);
-                    if (request) {
-                        request.status = status;
-                        stateManager.saveState();
+                async updateStatus(id, status, type) {
+                    const collectionName = type === 'general' ? 'inbox' : 'salaryRequests';
+                    try {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${collectionName}`, id);
+                        await updateDoc(docRef, { status });
                         showToast('Request status updated.', 'success');
-                        render.view('Inbox');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
                     }
                 }
             },
             rewards: {
-                award(e) {
+                async award(e) {
                     e.preventDefault();
                     const form = e.target;
                     const staffId = form.querySelector('#reward-staff').value;
                     const points = parseInt(form.querySelector('#reward-points').value);
                     if (isNaN(points)) return showToast('Invalid points value.', 'error');
                     
-                    if (!state.profiles[staffId]) {
-                        state.profiles[staffId] = { performance: { points: 0 }};
+                    const staffMember = state.staff.find(s => s.id === staffId);
+                    if (!staffMember) return showToast('Staff not found', 'error');
+
+                    const currentPoints = staffMember.profile?.performance?.points || 0;
+                    const newPoints = currentPoints + points;
+
+                    try {
+                        const staffDocRef = doc(db, `artifacts/${appId}/public/data/staff`, staffId);
+                        await updateDoc(staffDocRef, { 'profile.performance.points': newPoints });
+                        showToast(`${points} points awarded.`, 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
                     }
-                    if (!state.profiles[staffId].performance) {
-                        state.profiles[staffId].performance = { points: 0 };
-                    }
-                    state.profiles[staffId].performance.points += points;
-                    stateManager.saveState();
-                    showToast(`${points} points awarded.`, 'success');
-                    render.view('Rewards');
                 }
             },
             settings: {
-                save(e) {
+                async save(e) {
                     e.preventDefault();
-                    state.settings.org = $('#setting-org').value;
-                    state.settings.webhook = $('#setting-webhook').value;
-                    state.settings.breakMins = parseInt($('#setting-break').value);
-                    state.settings.targetMins = parseInt($('#setting-target').value);
-                    state.settings.halfDayMins = parseInt($('#setting-halfday').value);
+                    const newSettings = {
+                        org: $('#setting-org').value,
+                        webhook: $('#setting-webhook').value,
+                        breakMins: parseInt($('#setting-break').value),
+                        targetMins: parseInt($('#setting-target').value),
+                        halfDayMins: parseInt($('#setting-halfday').value),
+                        centres: state.settings.centres || []
+                    };
                     
-                    stateManager.saveState();
-                    showToast('Settings saved.', 'success');
-                    render.view('Settings');
-                    // Refresh login screen if it's visible
-                    if (!state.currentUser) render.login();
+                    try {
+                        await setDoc(doc(db, `artifacts/${appId}/public/data/config/settings`), newSettings);
+                        showToast('Settings saved.', 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                addCentre() {
+                async addCentre() {
                     const newCentreInput = $('#new-centre-input');
                     const newCentre = newCentreInput.value.trim();
                     if (newCentre && !state.settings.centres.includes(newCentre)) {
-                        state.settings.centres.push(newCentre);
-                        stateManager.saveState();
-                        showToast('Centre added.', 'success');
-                        render.view('Settings');
+                        const updatedCentres = [...state.settings.centres, newCentre];
+                        try {
+                            const settingsDocRef = doc(db, `artifacts/${appId}/public/data/config/settings`);
+                            await updateDoc(settingsDocRef, { centres: updatedCentres });
+                            showToast('Centre added.', 'success');
+                            newCentreInput.value = '';
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
                     }
-                    newCentreInput.value = '';
                 },
-                removeCentre(centre) {
+                async removeCentre(centre) {
                     if (confirm(`Remove centre "${centre}"?`)) {
-                        state.settings.centres = state.settings.centres.filter(c => c !== centre);
-                        stateManager.saveState();
-                        showToast('Centre removed.', 'success');
-                        render.view('Settings');
+                        const updatedCentres = state.settings.centres.filter(c => c !== centre);
+                        try {
+                            const settingsDocRef = doc(db, `artifacts/${appId}/public/data/config/settings`);
+                            await updateDoc(settingsDocRef, { centres: updatedCentres });
+                            showToast('Centre removed.', 'success');
+                        } catch (err) {
+                            showToast(`Error: ${err.message}`, 'error');
+                        }
                     }
                 }
             },
@@ -2120,46 +2255,32 @@
                     );
                     return [headerRow, ...rows].join('\r\n');
                 },
-                staff() {
-                    const data = state.staff;
-                    const csv = this._toCSV(data, ['ID', 'Name', 'Role', 'DefaultWorksite', 'JoinDate', 'Active']);
-                    this._download('staff.csv', csv);
-                },
-                sessions() {
-                    const data = state.sessions;
-                    const csv = this._toCSV(data, ['ID', 'StaffID', 'Date', 'Centre', 'ClockIn', 'ClockOut']);
-                    this._download('sessions.csv', csv);
-                },
-                leaves() {
-                    const data = state.leaves;
-                    const csv = this._toCSV(data, ['ID', 'StaffID', 'Date', 'Type', 'Minutes', 'Status']);
-                    this._download('leaves.csv', csv);
-                },
-                shifts() {
-                    const data = state.shifts;
-                    const csv = this._toCSV(data, ['ID', 'StaffID', 'Date', 'Centre', 'Start', 'End']);
-                    this._download('shifts.csv', csv);
-                },
+                staff() { this._download('staff.csv', this._toCSV(state.staff, ['ID', 'Name', 'Role', 'DefaultWorksite', 'JoinDate', 'Active'])); },
+                sessions() { this._download('sessions.csv', this._toCSV(state.sessions, ['ID', 'StaffID', 'Date', 'Centre', 'ClockIn', 'ClockOut'])); },
+                leaves() { this._download('leaves.csv', this._toCSV(state.leaves, ['ID', 'StaffID', 'Date', 'Type', 'Minutes', 'Status'])); },
+                shifts() { this._download('shifts.csv', this._toCSV(state.shifts, ['ID', 'StaffID', 'Date', 'Centre', 'Start', 'End'])); },
                 json() {
                     const filename = `mls_backup_${utils.today()}.json`;
                     this._download(filename, JSON.stringify(state, null, 2));
                 }
             },
             notices: {
-                add(e) {
+                async add(e) {
                     e.preventDefault();
                     const form = e.target;
                     const newNotice = {
-                        id: `n_${Date.now()}`,
                         title: form.querySelector('#notice-title').value,
                         body: form.querySelector('#notice-body').value,
                         centre: form.querySelector('#notice-centre').value,
                         createdAt: new Date().toISOString(),
                     };
-                    state.notices.push(newNotice);
-                    stateManager.saveState();
-                    showToast('Notice posted.', 'success');
-                    render.view('Notice Board');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/notices`), newNotice);
+                        showToast('Notice posted.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 }
             },
             clock: {
@@ -2168,10 +2289,9 @@
                     const staffId = state.currentUser.id;
                     return state.sessions.find(s => s.staffId === staffId && s.date === today && !s.clockOut);
                 },
-                clockIn() {
+                async clockIn() {
                     if (this._getCurrentSession()) return showToast('Already clocked in.', 'error');
                     const newSession = {
-                        id: `s_${Date.now()}_${state.currentUser.id}`,
                         staffId: state.currentUser.id,
                         date: utils.today(),
                         centre: state.currentCentre,
@@ -2179,45 +2299,60 @@
                         clockOut: null,
                         breaks: [],
                     };
-                    state.sessions.push(newSession);
-                    stateManager.saveState();
-                    showToast('Clocked in successfully.', 'success');
-                    render.view('Clock');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/sessions`), newSession);
+                        showToast('Clocked in successfully.', 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                clockOut() {
+                async clockOut() {
                     const session = this._getCurrentSession();
                     if (!session) return showToast('Not clocked in.', 'error');
-                    session.clockOut = new Date().toISOString();
-                    stateManager.saveState();
-                    showToast('Clocked out successfully.', 'success');
-                    render.view('Clock');
+                    try {
+                        const sessionDocRef = doc(db, `artifacts/${appId}/public/data/sessions`, session.id);
+                        await updateDoc(sessionDocRef, { clockOut: new Date().toISOString() });
+                        showToast('Clocked out successfully.', 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                startBreak() {
+                async startBreak() {
                     const session = this._getCurrentSession();
                     if (!session) return showToast('Not clocked in.', 'error');
                     if (session.breaks.some(b => b.start && !b.end)) return showToast('Already on a break.', 'error');
-                    session.breaks.push({ start: new Date().toISOString(), end: null });
-                    stateManager.saveState();
-                    showToast('Break started.', 'success');
-                    render.view('Clock');
+                    
+                    const newBreaks = [...session.breaks, { start: new Date().toISOString(), end: null }];
+                    try {
+                        const sessionDocRef = doc(db, `artifacts/${appId}/public/data/sessions`, session.id);
+                        await updateDoc(sessionDocRef, { breaks: newBreaks });
+                        showToast('Break started.', 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                endBreak() {
+                async endBreak() {
                     const session = this._getCurrentSession();
                     if (!session) return showToast('Not clocked in.', 'error');
-                    const activeBreak = session.breaks.find(b => b.start && !b.end);
-                    if (!activeBreak) return showToast('Not on a break.', 'error');
-                    activeBreak.end = new Date().toISOString();
-                    stateManager.saveState();
-                    showToast('Break ended.', 'success');
-                    render.view('Clock');
+                    const activeBreakIndex = session.breaks.findIndex(b => b.start && !b.end);
+                    if (activeBreakIndex === -1) return showToast('Not on a break.', 'error');
+
+                    const newBreaks = [...session.breaks];
+                    newBreaks[activeBreakIndex].end = new Date().toISOString();
+                     try {
+                        const sessionDocRef = doc(db, `artifacts/${appId}/public/data/sessions`, session.id);
+                        await updateDoc(sessionDocRef, { breaks: newBreaks });
+                        showToast('Break ended.', 'success');
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
             },
             requests: {
-                submitGeneral(e) {
+                async submitGeneral(e) {
                     e.preventDefault();
                     const form = e.target;
                     const newRequest = {
-                        id: `r_${Date.now()}`,
                         staffId: state.currentUser.id,
                         when: new Date().toISOString(),
                         type: form.querySelector('#request-type').value,
@@ -2225,47 +2360,54 @@
                         message: form.querySelector('#request-message').value,
                         status: 'Pending'
                     };
-                    state.inbox.push(newRequest);
-                    stateManager.saveState();
-                    showToast('Request submitted.', 'success');
-                    render.view('My Requests');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/inbox`), newRequest);
+                        showToast('Request submitted.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 },
-                submitSalary(e) {
+                async submitSalary(e) {
                     e.preventDefault();
                     const form = e.target;
                     const newRequest = {
-                        id: `sr_${Date.now()}`,
                         staffId: state.currentUser.id,
                         when: new Date().toISOString(),
                         amount: parseFloat(form.querySelector('#salary-amount').value),
                         reason: form.querySelector('#salary-reason').value,
                         status: 'Pending'
                     };
-                    state.salaryRequests.push(newRequest);
-                    stateManager.saveState();
-                    showToast('Salary request submitted.', 'success');
-                    render.view('My Requests');
+                    try {
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/salaryRequests`), newRequest);
+                        showToast('Salary request submitted.', 'success');
+                        form.reset();
+                    } catch (err) {
+                        showToast(`Error: ${err.message}`, 'error');
+                    }
                 }
             },
             profile: {
                 _handleFileUpload(file, staffId) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
+                    reader.onload = async (e) => {
                         const newDoc = {
                             name: file.name,
                             dataUrl: e.target.result,
                             uploadedAt: new Date().toISOString()
                         };
-                        if (!state.profiles[staffId]) state.profiles[staffId] = {};
-                        if (!state.profiles[staffId].documents) state.profiles[staffId].documents = [];
-                        state.profiles[staffId].documents.push(newDoc);
-                        stateManager.saveState();
-                        showToast('Document uploaded.', 'success');
-                        // Re-render appropriate view
-                        if ($('#my-document-list')) { // My Profile view
-                            render.view('My Profile');
-                        } else if (profileDrawer.classList.contains('open')) { // Drawer view
-                            render.profileDrawer(staffId);
+                        
+                        const staffMember = state.staff.find(s => s.id === staffId);
+                        if (!staffMember) return;
+
+                        const newDocuments = [...(staffMember.profile.documents || []), newDoc];
+                        
+                        try {
+                            const staffDocRef = doc(db, `artifacts/${appId}/public/data/staff`, staffId);
+                            await updateDoc(staffDocRef, { 'profile.documents': newDocuments });
+                            showToast('Document uploaded.', 'success');
+                        } catch (err) {
+                             showToast(`Error: ${err.message}`, 'error');
                         }
                     };
                     reader.readAsDataURL(file);
@@ -2307,16 +2449,12 @@
         }
 
         // --- APP INITIALIZATION ---
-        function init() {
-            app.classList.remove('loading');
-            stateManager.init();
-
+        async function init() {
             // Global event listeners
             loginForm.addEventListener('submit', events.auth.login);
             tabNav.addEventListener('click', events.navigation.handleTabClick);
             headerActions.addEventListener('click', events.header.handleActionClick);
             
-            // Drawer listeners
             drawerClose.addEventListener('click', () => {
                 profileDrawerOverlay.classList.remove('open');
                 profileDrawer.classList.remove('open');
@@ -2328,12 +2466,7 @@
                 }
             });
 
-            // Check if user is already logged in
-            if (state.currentUser) {
-                render.app();
-            } else {
-                render.login();
-            }
+            await stateManager.initFirebase();
         }
 
         // --- START THE APP ---
