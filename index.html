@@ -176,19 +176,19 @@
             display: none;
         }
 
-        /* Login Screen */
-        #login-screen {
+        /* Login & Setup Screens */
+        #login-screen, #setup-screen {
             display: flex;
             align-items: center;
             justify-content: center;
             flex-grow: 1;
             padding: 1rem;
         }
-        #login-card {
+        #login-card, #setup-card {
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
         }
-        #login-card h1 {
+        #login-card h1, #setup-card h1 {
             text-align: center;
             margin-bottom: 1.5rem;
             color: var(--primary-color);
@@ -436,6 +436,22 @@
 <body>
 
     <div id="app" class="loading">
+        <!-- Firebase Setup Screen -->
+        <div id="setup-screen" class="hidden">
+            <div id="setup-card" class="card">
+                <h1>One-Time Setup</h1>
+                <p class="mb-4 text-light">Please paste your Firebase configuration object below. You can find this in your Firebase project settings.</p>
+                <form id="setup-form">
+                    <div class="form-group">
+                        <label for="firebase-config-input">Firebase Config (JSON)</label>
+                        <textarea id="firebase-config-input" class="form-control" rows="10" required placeholder='{ "apiKey": "...", "authDomain": "...", ... }'></textarea>
+                        <div id="setup-error" class="form-error">Invalid JSON. Please paste the full config object.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full">Save and Initialize</button>
+                </form>
+            </div>
+        </div>
+
         <!-- Login Screen -->
         <div id="login-screen" class="hidden">
             <div id="login-card" class="card">
@@ -501,13 +517,17 @@
         import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, writeBatch, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- CONSTANTS & CONFIG ---
-        const STATE_KEY = 'MLS_DAILY_STATE_V4_SESSION'; // Changed to session storage for non-persistent local data
+        const SESSION_STATE_KEY = 'MLS_DAILY_STATE_V4_SESSION';
+        const FIREBASE_CONFIG_KEY = 'MLS_DAILY_FIREBASE_CONFIG';
         const ADMIN_PIN = '0000';
 
         // --- DOM ELEMENTS ---
         const $ = (selector) => document.querySelector(selector);
         const $$ = (selector) => document.querySelectorAll(selector);
         const app = $('#app');
+        const setupScreen = $('#setup-screen');
+        const setupForm = $('#setup-form');
+        const setupError = $('#setup-error');
         const loginScreen = $('#login-screen');
         const mainApp = $('#main-app');
         const loginForm = $('#login-form');
@@ -546,23 +566,38 @@
 
         // --- STATE MANAGEMENT (Now with FIREBASE) ---
         const stateManager = {
-            getSessionState: () => JSON.parse(sessionStorage.getItem(STATE_KEY)),
-            saveSessionState: () => sessionStorage.setItem(STATE_KEY, JSON.stringify({
+            getSessionState: () => JSON.parse(sessionStorage.getItem(SESSION_STATE_KEY)),
+            saveSessionState: () => sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify({
                 currentUser: state.currentUser,
                 currentCentre: state.currentCentre
             })),
-            clearSessionState: () => sessionStorage.removeItem(STATE_KEY),
+            clearSessionState: () => sessionStorage.removeItem(SESSION_STATE_KEY),
             
             async initFirebase() {
-                // These variables are expected to be provided by the environment
                 appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-                const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                let firebaseConfig = null;
 
+                // 1. Try getting config from localStorage (for deployed version)
+                const storedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+                if (storedConfig) {
+                    try {
+                        firebaseConfig = JSON.parse(storedConfig);
+                    } catch (e) {
+                        console.error("Failed to parse stored Firebase config.");
+                        localStorage.removeItem(FIREBASE_CONFIG_KEY);
+                    }
+                }
+
+                // 2. Fallback to injected config (for original environment)
+                if (!firebaseConfig && typeof __firebase_config !== 'undefined') {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                }
+
+                // 3. If no config, show setup screen
                 if (!firebaseConfig) {
-                    app.innerHTML = '<h1>Firebase configuration is missing.</h1>';
-                    console.error("Firebase config is missing.");
-                    return;
+                    app.classList.remove('loading');
+                    setupScreen.classList.remove('hidden');
+                    return; // Stop initialization until config is provided
                 }
 
                 const firebaseApp = initializeApp(firebaseConfig);
@@ -570,6 +605,7 @@
                 auth = getAuth(firebaseApp);
 
                 try {
+                    const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                     if (authToken) {
                         await signInWithCustomToken(auth, authToken);
                     } else {
@@ -579,7 +615,8 @@
                     await this.loadInitialData();
                 } catch (error) {
                     console.error("Firebase initialization failed:", error);
-                    app.innerHTML = '<h1>Could not connect to the database.</h1>';
+                    app.classList.remove('loading');
+                    app.innerHTML = `<h1>Could not connect to the database.</h1><p>Error: ${error.message}</p><p>Please check your Firebase configuration and security rules.</p>`;
                 }
             },
 
@@ -603,8 +640,14 @@
 
                 const settingsUnsub = onSnapshot(doc(db, `${basePath}/config/settings`), (doc) => {
                     state.settings = doc.data() || {};
-                    // Re-render if a view depends on settings
-                    if(state.currentUser) render.view($('.tab-btn.active')?.dataset.tab || 'Today');
+                    if(state.currentUser) {
+                        render.view($('.tab-btn.active')?.dataset.tab || 'Today');
+                    } else {
+                        render.login();
+                    }
+                }, (error) => {
+                    console.error("Error listening to settings:", error);
+                    showToast("Connection to settings lost.", "error");
                 });
                 unsubscribeListeners.push(settingsUnsub);
 
@@ -613,20 +656,20 @@
                     const unsub = onSnapshot(q, (snapshot) => {
                         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         state[coll] = data;
-                        // For profiles, we'll map it to an object for easy lookup
                         if (coll === 'staff') {
                             state.profiles = data.reduce((acc, staff) => {
                                 acc[staff.id] = staff.profile || {};
                                 return acc;
                             }, {});
                         }
-                        // Re-render the current view to show updated data
                         if(state.currentUser) render.view($('.tab-btn.active')?.dataset.tab || 'Today');
+                    }, (error) => {
+                        console.error(`Error listening to ${coll}:`, error);
+                        showToast(`Connection to ${coll} data lost.`, "error");
                     });
                     unsubscribeListeners.push(unsub);
                 });
 
-                // Once initial data structure is ready, check for session
                 const session = this.getSessionState();
                 if (session && session.currentUser) {
                     state.currentUser = session.currentUser;
@@ -671,16 +714,13 @@
                 const batch = writeBatch(db);
                 const basePath = `artifacts/${appId}/public/data`;
 
-                // Set settings
                 batch.set(doc(db, `${basePath}/config/settings`), seed.settings);
 
-                // Add staff (using their ID as document ID)
                 seed.staff.forEach(s => {
                     const staffDocRef = doc(db, `${basePath}/staff`, s.id);
                     batch.set(staffDocRef, s);
                 });
                 
-                // Add other collections
                 ['sessions', 'leaves', 'holidays', 'notices'].forEach(coll => {
                     seed[coll].forEach(item => {
                         const newDocRef = doc(collection(db, `${basePath}/${coll}`));
@@ -720,10 +760,8 @@
                     return acc;
                 }, 0);
 
-                // Subtract breaks
-                totalMins -= state.settings.breakMins;
+                totalMins -= state.settings.breakMins || 0;
 
-                // Handle leaves
                 const approvedLeaves = state.leaves.filter(l => l.staffId === staffId && l.date === date && l.status === 'Approved');
                 if (approvedLeaves.some(l => l.type === 'Full')) return 0;
                 
@@ -733,7 +771,7 @@
                 totalMins -= shortLeaveMins;
 
                 if (approvedLeaves.some(l => l.type === 'Half')) {
-                    totalMins = Math.min(totalMins, state.settings.halfDayMins);
+                    totalMins = Math.min(totalMins, state.settings.halfDayMins || 240);
                 }
 
                 return Math.max(0, Math.round(totalMins));
@@ -757,6 +795,7 @@
                      centreSelect.innerHTML = '<option>Loading centres...</option>';
                 }
                 loginScreen.classList.remove('hidden');
+                setupScreen.classList.add('hidden');
                 mainApp.classList.add('hidden');
             },
             app() {
@@ -1918,6 +1957,28 @@
 
         // --- EVENT HANDLERS & LOGIC ---
         const events = {
+            setup: {
+                saveConfig(e) {
+                    e.preventDefault();
+                    setupError.style.display = 'none';
+                    const configInput = $('#firebase-config-input').value;
+                    try {
+                        const config = JSON.parse(configInput);
+                        // Basic validation
+                        if (config.apiKey && config.authDomain && config.projectId) {
+                            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+                            showToast('Configuration saved. Reloading app...', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            throw new Error("Missing required keys like apiKey, authDomain, or projectId.");
+                        }
+                    } catch (err) {
+                        console.error("Invalid Firebase config:", err);
+                        setupError.textContent = `Invalid JSON or missing keys. ${err.message}`;
+                        setupError.style.display = 'block';
+                    }
+                }
+            },
             auth: {
                 login(e) {
                     e.preventDefault();
@@ -2333,7 +2394,7 @@
                 },
                 async endBreak() {
                     const session = this._getCurrentSession();
-                    if (!session) return showToast('Not clocked in.', 'error');
+                    if (!session) return showToast('Not on a break.', 'error');
                     const activeBreakIndex = session.breaks.findIndex(b => b.start && !b.end);
                     if (activeBreakIndex === -1) return showToast('Not on a break.', 'error');
 
@@ -2451,6 +2512,7 @@
         // --- APP INITIALIZATION ---
         async function init() {
             // Global event listeners
+            setupForm.addEventListener('submit', events.setup.saveConfig);
             loginForm.addEventListener('submit', events.auth.login);
             tabNav.addEventListener('click', events.navigation.handleTabClick);
             headerActions.addEventListener('click', events.header.handleActionClick);
