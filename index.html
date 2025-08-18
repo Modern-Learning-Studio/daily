@@ -150,7 +150,7 @@
       test: document.getElementById('btn-test'),
     };
 
-    const STORAGE_KEY = 'mls_daily_state_v4';
+    const STORAGE_KEY = 'mls_daily_state_v5';
     const DEFAULT_CENTRES = [
       'MLS - Colombo 4',
       'Finnish Preschool - Park Road',
@@ -176,38 +176,6 @@
     const minToHHMM = m => { m=Math.max(0,Math.round(m)); const h=Math.floor(m/60), mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); };
 
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    
-    function ensureDummyRange101_600(){
-      try{
-        state.staff ||= [];
-        state.profiles ||= {};
-        const haveIds = new Set(state.staff.map(s=>String(s.id)));
-        const existingPins = new Set(state.staff.map(s=>String(s.pin||'').replace(/\D+/g,'')));
-        function rand6(){
-          let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p));
-          existingPins.add(p); return p;
-        }
-        let changed = false;
-        for(let i=0;i<500;i++){
-          const sid = String(101+i);
-          if(!haveIds.has(sid)){
-            const pin = rand6();
-            state.staff.push({ id:sid, name:`Staff ${sid}`, role:'Teacher', pin, active:true });
-            state.profiles[sid] = state.profiles[sid] || { info:{ fullName:`Staff ${sid}`, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
-            changed = true;
-          }else{
-            const s = state.staff.find(x=>String(x.id)===sid);
-            const pin = String((s.pin||'').replace(/\D+/g,''));
-            if(pin.length !== 6){
-              s.pin = rand6(); changed = true;
-            }
-          }
-        }
-        if(changed) save();
-        ensureDummyRange101_600();
-      }catch(e){ /* no-op */ }
-    }
-
     function load(){
       try{
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -221,32 +189,11 @@
         if(!Array.isArray(state.settings.centres) || !state.settings.centres.length){
           state.settings.centres = DEFAULT_CENTRES.slice();
         }
-        // Admin PIN migration → default to 311987 if missing/invalid
         if(!/^\d{6}$/.test(String(state.settings.adminPin||''))){
           state.settings.adminPin = '311987';
         }
         (state.loginLogs ||= []);
-
-        // One-time migration: ensure dummy range (2001–2500) has 6-digit random PINs
-        if(!state._seed500pins6){
-          const existingPins = new Set((state.staff||[]).map(s=>String(s.pin||'')));
-          const taken = new Set();
-          function rand6(){
-            let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p) || taken.has(p));
-            existingPins.add(p); taken.add(p); return p;
-          }
-          for(const s of (state.staff||[])){
-            const numId = Number(s.id);
-            const pin = String(s.pin||'').replace(/\D+/g,'');
-            if(numId>=101 && numId<=600 && pin.length!=6){
-              s.pin = rand6();
-            }
-          }
-          state._seed500pins6 = true;
-          save();
-        }
       }catch(e){ seed(); save(); }
-      ensureDummyRange101_600();
     }
 
     function seed(){
@@ -296,8 +243,7 @@
         loginLogs:[]
       };
 
-      
-      // ----- 500 dummy staff with UNIQUE 6-digit random PINs (IDs 101–600)
+      // 500 dummy staff with UNIQUE 6-digit random PINs (IDs 101–600)
       const existingPins = new Set(state.staff.map(s=>String(s.pin)));
       function rand6(){
         let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p));
@@ -314,10 +260,39 @@
           documents:[]
         };
       }
-      state._seed500pins6 = true;
-    
     }
 
+    function populateCentres(){
+      const list = (state.settings && Array.isArray(state.settings.centres) && state.settings.centres.length)
+        ? state.settings.centres : DEFAULT_CENTRES;
+      DOM.worksite.innerHTML = '<option value="" disabled selected>Select centre</option>'
+        + list.map(c=>`<option>${c}</option>`).join('');
+    }
+
+    function dayWorkedMinutes(staffId, date){
+      const session = state.sessions.filter(s=>s.staffId===staffId && s.date===date);
+      let total = 0;
+      for(const s of session){
+        let mins = hhmmToMin(s.clockOut)-hhmmToMin(s.clockIn);
+        if(Array.isArray(s.breaks)){
+          for(const b of s.breaks){
+            mins -= (hhmmToMin(b.end)-hhmmToMin(b.start));
+          }
+        }
+        total += Math.max(0, mins);
+      }
+      if(session.length) total = Math.max(0, total - (state.settings.breakMins||30));
+      const leaves = state.leaves.filter(l=>l.staffId===staffId && l.date===date && l.status==='Approved');
+      if(leaves.some(l=>l.type==='Full')) return 0;
+      const short = leaves.filter(l=>l.type==='Short').reduce((a,b)=>a+(b.minutes||0),0);
+      total -= short;
+      if(leaves.some(l=>l.type==='Half')){
+        total = Math.min(total, state.settings.halfDayMins||240);
+      }
+      return Math.max(0,total);
+    }
+
+    // -------- Cloud helpers --------
     async function fetchCloudState(){
       const url = state?.settings?.webhook;
       if(!url) return false;
@@ -384,70 +359,61 @@
       }catch(e){ alert('Could not reach webhook: '+e.message); }
     }
 
-    function populateCentres(){
-      const list = (state.settings && Array.isArray(state.settings.centres) && state.settings.centres.length)
-        ? state.settings.centres : DEFAULT_CENTRES;
-      DOM.worksite.innerHTML = '<option value="" disabled selected>Select centre</option>'
-        + list.map(c=>`<option>${c}</option>`).join('');
-    }
-
-    function dayWorkedMinutes(staffId, date){
-      const session = state.sessions.filter(s=>s.staffId===staffId && s.date===date);
-      let total = 0;
-      for(const s of session){
-        let mins = hhmmToMin(s.clockOut)-hhmmToMin(s.clockIn);
-        if(Array.isArray(s.breaks)){
-          for(const b of s.breaks){
-            mins -= (hhmmToMin(b.end)-hhmmToMin(b.start));
+    // Ensure dummy range 101–600 exists with 6-digit PINs, repair if needed
+    function ensureDummyRange101_600(){
+      try{
+        state.staff ||= [];
+        state.profiles ||= {};
+        const haveIds = new Set(state.staff.map(s=>String(s.id)));
+        const existingPins = new Set(state.staff.map(s=>String(s.pin||'').replace(/\D+/g,'')));
+        function rand6(){
+          let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p));
+          existingPins.add(p); return p;
+        }
+        let changed = false;
+        for(let i=0;i<500;i++){
+          const sid = String(101+i);
+          if(!haveIds.has(sid)){
+            const pin = rand6();
+            state.staff.push({ id:sid, name:`Staff ${sid}`, role:'Teacher', pin, active:true });
+            state.profiles[sid] = state.profiles[sid] || { info:{ fullName:`Staff ${sid}`, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
+            changed = true;
+          }else{
+            const s = state.staff.find(x=>String(x.id)===sid);
+            const pin = String((s.pin||'').replace(/\D+/g,''));
+            if(pin.length !== 6){
+              s.pin = rand6(); changed = true;
+            }
           }
         }
-        total += Math.max(0, mins);
-      }
-      if(session.length) total = Math.max(0, total - (state.settings.breakMins||30));
-      const leaves = state.leaves.filter(l=>l.staffId===staffId && l.date===date && l.status==='Approved');
-      if(leaves.some(l=>l.type==='Full')) return 0;
-      const short = leaves.filter(l=>l.type==='Short').reduce((a,b)=>a+(b.minutes||0),0);
-      total -= short;
-      if(leaves.some(l=>l.type==='Half')){
-        total = Math.min(total, state.settings.halfDayMins||240);
-      }
-      return Math.max(0,total);
+        if(changed) save();
+      }catch(e){ /* no-op */ }
     }
 
-    function sanitizePIN(v){ return String(v||'').normalize('NFKC').replace(/\D+/g,''); }
-
-    async function handleLogin(e){
-      e.preventDefault();
-      DOM.err.textContent='';
-      const centre = DOM.worksite.value;
-      const pin = sanitizePIN(DOM.pin.value);
-      if(!centre){ DOM.err.textContent='Please select a centre.'; return; }
-      if(!pin){ DOM.err.textContent='Enter PIN.'; return; }
-
-      function matchLocal(p){
-        if(p===String(state.settings.adminPin||'311987')) return { id:'admin', name:'Admin', role:'Admin', active:true };
-        const found = (state.staff||[]).find(s => sanitizePIN(s.pin)===p && s.active!==false);
-        if(found) return { id:found.id, name:found.name, role:'Staff', active:true };
-        return null;
-      }
-
-      let u = matchLocal(pin);
-      if(!u){
-        await fetchCloudState();
-        u = matchLocal(pin);
-      }
-      if(!u){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
-
-      user = u; worksite = centre;
-      state.loginLogs.unshift({ id:id(), staffId:u.id, centre, atISO:new Date().toISOString() });
-      save();
-
-      DOM.login.classList.add('hidden');
-      DOM.app.classList.remove('hidden');
-      renderHeader();
-      renderTabs();
-      show(user.role==='Admin' ? 'Today' : 'My Dashboard');
-      DOM.pin.value='';
+    // Seed to cloud if cloud missing (avoid divergent local randoms)
+    async function cloudSeedIfNeeded(){
+      try{
+        if(!state.settings?.webhook) return false;
+        if(state._cloudSeeded_101_600) return false;
+        const have101 = (state.staff||[]).some(s=>String(s.id)==='101');
+        const count = (state.staff||[]).length;
+        if(have101 && count>=500){ state._cloudSeeded_101_600 = true; return false; }
+        state.staff ||= []; state.profiles ||= {};
+        const usedPins = new Set(state.staff.map(s=>String(s.pin||'').replace(/\D+/g,'')));
+        function rand6(){ let p; do{ p=String(Math.floor(100000+Math.random()*900000)); } while(usedPins.has(p)); usedPins.add(p); return p; }
+        for(let i=0;i<500;i++){
+          const sid = String(101+i);
+          if(!(state.staff||[]).some(x=>String(x.id)===sid)){
+            const pin = rand6();
+            state.staff.push({ id:sid, name:`Staff ${sid}`, role:'Teacher', pin, active:true });
+            state.profiles[sid] = state.profiles[sid] || { info:{ fullName:`Staff ${sid}`, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
+          }
+        }
+        state._cloudSeeded_101_600 = true;
+        save();
+        try{ await syncToWebhook(); }catch(e){}
+        return true;
+      }catch(e){ return false; }
     }
 
     function renderHeader(){
@@ -474,6 +440,44 @@
 
       const fn = RENDER['render'+name.replace(/\s+/g,'')];
       if(fn) fn(view); else view.innerHTML = `<div class="card"><h3>${name}</h3><p>Under construction.</p></div>`;
+    }
+
+    function sanitizePIN(v){ return String(v||'').normalize('NFKC').replace(/\D+/g,''); }
+
+    async function handleLogin(e){
+      e.preventDefault();
+      DOM.err.textContent='';
+      const centre = DOM.worksite.value;
+      const pin = sanitizePIN(DOM.pin.value);
+      if(!centre){ DOM.err.textContent='Please select a centre.'; return; }
+      if(!pin){ DOM.err.textContent='Enter PIN.'; return; }
+
+      // Cloud-first: refresh from webhook so all devices share the same data
+      if(state.settings?.webhook){
+        await fetchCloudState();
+        await cloudSeedIfNeeded();
+      }
+
+      function matchLocal(p){
+        if(p===String(state.settings.adminPin||'311987')) return { id:'admin', name:'Admin', role:'Admin', active:true };
+        const found = (state.staff||[]).find(s => sanitizePIN(s.pin)===p && s.active!==false);
+        if(found) return { id:found.id, name:found.name, role:'Staff', active:true };
+        return null;
+      }
+
+      let u = matchLocal(pin);
+      if(!u){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
+
+      user = u; worksite = centre;
+      state.loginLogs.unshift({ id:id(), staffId:u.id, centre, atISO:new Date().toISOString() });
+      save();
+
+      DOM.login.classList.add('hidden');
+      DOM.app.classList.remove('hidden');
+      renderHeader();
+      renderTabs();
+      show(user.role==='Admin' ? 'Today' : 'My Dashboard');
+      DOM.pin.value='';
     }
 
     const RENDER = {
@@ -569,7 +573,7 @@
                 <div><label>Centre</label><select id="sv-centre"><option value="all">All</option>${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
                 <div style="display:flex;align-items:flex-end"><button id="sv-refresh" class="btn">Refresh</button></div>
               </div>
-              <div style="margin-top:8px;max-height:420px;overflow:auto">
+              <div style="max-height:420px;overflow:auto;margin-top:8px">
                 <table id="sp-table"><thead><tr><th>Date</th><th>Centre</th><th>Staff</th><th>Start</th><th>End</th><th></th></tr></thead><tbody></tbody></table>
               </div>
             </div>
@@ -600,7 +604,6 @@
         draw();
       },
       renderLeaves(container){
-        const all = state.leaves.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
         container.innerHTML = `
           <div class="grid">
             <div class="card">
@@ -768,7 +771,7 @@
               </div>
             </div>
           </div>`;
-        container.querySelector('#st-add').onclick = () => {
+        container.querySelector('#st-add').onclick = async () => {
           const idv = container.querySelector('#st-id').value.trim();
           if(!idv){ alert('ID required'); return; }
           if(state.staff.some(s=>s.id===idv)){ alert('ID exists'); return; }
@@ -778,7 +781,9 @@
             pin: pinRaw || String(Math.floor(100000 + Math.random()*900000)), active:container.querySelector('#st-active').value==='true' };
           state.staff.push(obj);
           if(!state.profiles[idv]) state.profiles[idv] = { info:{ fullName:obj.name, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
-          save(); draw();
+          save();
+          if(state.settings?.webhook){ try{ await syncToWebhook(); }catch(e){} }
+          draw();
         };
         function draw(){
           const tb = container.querySelector('#st-tb');
@@ -835,7 +840,7 @@
               <button id="se-load" class="btn">Load from Webhook</button>
             </div>
           </div>`;
-        container.querySelector('#se-save').onclick=()=>{
+        container.querySelector('#se-save').onclick=async()=>{
           state.settings.org = container.querySelector('#se-org').value;
           state.settings.breakMins = container.querySelector('#se-break').valueAsNumber||30;
           state.settings.targetMins = container.querySelector('#se-target').valueAsNumber||480;
@@ -848,17 +853,25 @@
           const ap = String((container.querySelector('#se-adminpin').value||'').replace(/\D+/g,''));
           if(!/^\d{6}$/.test(ap)){ alert('Admin PIN must be 6 digits.'); return; }
           state.settings.adminPin = ap;
-          save(); populateCentres(); alert('Saved.');
+          save(); populateCentres(); if(state.settings?.webhook){ try{ await syncToWebhook(); }catch(e){} } alert('Saved.');
         };
         container.querySelector('#se-test').onclick=testWebhook;
         container.querySelector('#se-sync').onclick=syncToWebhook;
         container.querySelector('#se-load').onclick=async()=>{ const ok=await fetchCloudState(); alert(ok?'Loaded ✓':'Load failed'); };
       },
       renderExport(container){
-        
         container.innerHTML = `
           <div class="card">
             <h3>Export</h3>
+            <div class="row cols-3">
+              <button class="btn" id="ex-staff">Staff CSV</button>
+              <button class="btn" id="ex-dummy">Dummy Staff (101–600) CSV</button>
+              <button class="btn" id="ex-sessions">Sessions CSV</button>
+              <button class="btn" id="ex-leaves">Leaves CSV</button>
+              <button class="btn" id="ex-holidays">Holidays CSV</button>
+              <button class="btn primary" id="ex-json">Full Backup (JSON)</button>
+            </div>
+          </div>
           <div class="card" style="margin-top:12px">
             <h3>PIN Directory — Dummy Staff (101–600)</h3>
             <div class="row cols-3">
@@ -873,16 +886,7 @@
               </table>
             </div>
           </div>
-    
-            <div class="row cols-3">
-              <button class="btn" id="ex-staff">Staff CSV</button>
-              <button class="btn" id="ex-dummy">Dummy Staff (101–600) CSV</button>
-              <button class="btn" id="ex-sessions">Sessions CSV</button>
-              <button class="btn" id="ex-leaves">Leaves CSV</button>
-              <button class="btn" id="ex-holidays">Holidays CSV</button>
-              <button class="btn primary" id="ex-json">Full Backup (JSON)</button>
-            </div>
-          </div>`;
+        `;
         function download(name, mime, content){
           const a = document.createElement('a');
           a.href = URL.createObjectURL(new Blob([content],{type:mime}));
@@ -896,14 +900,13 @@
         }
         container.querySelector('#ex-staff').onclick=()=> download('staff.csv','text/csv', csv(state.staff));
         container.querySelector('#ex-sessions').onclick=()=> download('sessions.csv','text/csv', csv(state.sessions));
+        container.querySelector('#ex-leaves').onclick=()=> download('leaves.csv','text/csv', csv(state.leaves));
+        container.querySelector('#ex-holidays').onclick=()=> download('holidays.csv','text/csv', csv(state.holidays));
+        container.querySelector('#ex-json').onclick=()=> download(`mls_daily_${today()}.json`,'application/json', JSON.stringify(state,null,2));
         container.querySelector('#ex-dummy').onclick=()=>{
           const list = (state.staff||[]).filter(s=>Number(s.id)>=101 && Number(s.id)<=600);
           download('dummy_staff_101_600.csv','text/csv', csv(list));
         };
-        container.querySelector('#ex-leaves').onclick=()=> download('leaves.csv','text/csv', csv(state.leaves));
-        container.querySelector('#ex-holidays').onclick=()=> download('holidays.csv','text/csv', csv(state.holidays));
-        container.querySelector('#ex-json').onclick=()=> download(`mls_daily_${today()}.json`,'application/json', JSON.stringify(state,null,2));
-        // PIN Directory draw
         function pdDraw(){
           const q = (container.querySelector('#pd-q')?.value||'').toLowerCase();
           const a = (container.querySelector('#pd-active')?.value||'all');
@@ -1208,10 +1211,10 @@
 
     async function main(){
       load();
+      ensureDummyRange101_600();
       populateCentres();
       setupEvents();
-      if(state.settings?.webhook){ await fetchCloudState(); }
-      ensureDummyRange101_600();
+      if(state.settings?.webhook){ await fetchCloudState(); await cloudSeedIfNeeded(); }
     }
     document.addEventListener('DOMContentLoaded', main);
   })();
