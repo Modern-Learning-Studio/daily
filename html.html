@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MLS DAILY</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#111827;
+      --border:#e5e7eb;
+      --accent:#22c55e;
+      --accent-600:#16a34a;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --blue:#3b82f6;
+      --radius:12px;
+      --shadow:0 6px 18px rgba(0,0,0,.06);
+      --sp:16px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.55;
+      font-size:16px;
+    }
+    .hidden{display:none!important}
+    .wrap{max-width:1100px;margin:0 auto;padding:var(--sp)}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--sp); margin-bottom:var(--sp)}
+    .header{
+      position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--border);
+      box-shadow:0 2px 12px rgba(0,0,0,.04);
+    }
+    .header .inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px var(--sp);}
+    .brand{font-weight:800;letter-spacing:.3px}
+    .brand .accent{color:var(--accent)}
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;color:white}
+    .badge-admin{background:var(--blue)}
+    .badge-staff{background:var(--accent)}
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff; color:#111827;
+      padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;
+      transition:all .18s ease; box-shadow:0 1px 0 rgba(0,0,0,.03);
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .btn.primary:hover{background:var(--accent-600)}
+    .btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .btn.warn{background:var(--warn);color:#111827;border-color:var(--warn)}
+    input,select,textarea{
+      width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);
+    }
+    label{font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;display:block}
+    .row{display:grid;gap:var(--sp)}
+    .row.cols-2{grid-template-columns:repeat(2,1fr)}
+    .row.cols-3{grid-template-columns:repeat(3,1fr)}
+    .row.cols-4{grid-template-columns:repeat(4,1fr)}
+    @media (max-width:900px){.row.cols-4{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:680px){.row.cols-3{grid-template-columns:1fr}.row.cols-2{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#fff;z-index:1}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:10px var(--sp)}
+    .nav .tab{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:#fff;font-weight:700}
+    .nav .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .status{padding:4px 10px;border-radius:999px;font-size:12px;color:#fff;display:inline-block}
+    .Approved{background:var(--accent)}
+    .Pending{background:var(--warn);color:#111827}
+    .Rejected{background:var(--danger)}
+    .subtle{color:var(--muted);font-size:13px}
+    .kpis{display:grid;gap:var(--sp);grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .kpi{padding:14px;border:1px solid var(--border);border-radius:10px;background:#fafafa}
+    .kpi .value{font-size:22px;font-weight:800}
+    .grid{display:grid;gap:var(--sp);grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .tag{font-size:12px;padding:4px 8px;border-radius:999px;background:#f3f4f6;border:1px solid var(--border);display:inline-block}
+    .sticky-footer{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);padding:10px;display:flex;gap:8px;justify-content:flex-end}
+    .login{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:var(--sp);}
+    .login .box{max-width:420px;width:100%}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="inner wrap">
+      <div class="brand">MLS <span class="accent">DAILY</span></div>
+      <div class="actions">
+        <span id="user-badge" class="badge hidden"></span>
+        <button id="btn-sync" class="btn">Sync → Webhook</button>
+        <button id="btn-load" class="btn">Load from Webhook</button>
+        <button id="btn-test" class="btn">Test Webhook</button>
+        <button id="btn-logout" class="btn danger hidden">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="login" class="login">
+      <div class="box card">
+        <h2 style="margin:0 0 8px 0">Welcome</h2>
+        <p class="subtle" style="margin:0 0 16px 0">Sign in with your PIN and centre.</p>
+        <form id="login-form">
+          <div class="row cols-1">
+            <div>
+              <label for="worksite">Centre</label>
+              <select id="worksite" required></select>
+            </div>
+            <div>
+              <label for="pin">PIN</label>
+              <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="6 digits" />
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button class="btn primary" type="submit" style="flex:1">Login</button>
+          </div>
+          <div id="login-error" class="subtle" style="color:var(--danger);min-height:22px;margin-top:8px"></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="app" class="hidden">
+      <nav id="tabs" class="nav"></nav>
+      <div id="views"></div>
+    </section>
+  </main>
+
+  <script>
+  (function(){
+    'use strict';
+
+    const DOM = {
+      login: document.getElementById('login'),
+      app: document.getElementById('app'),
+      worksite: document.getElementById('worksite'),
+      pin: document.getElementById('pin'),
+      frm: document.getElementById('login-form'),
+      err: document.getElementById('login-error'),
+      tabs: document.getElementById('tabs'),
+      views: document.getElementById('views'),
+      badge: document.getElementById('user-badge'),
+      logout: document.getElementById('btn-logout'),
+      sync: document.getElementById('btn-sync'),
+      load: document.getElementById('btn-load'),
+      test: document.getElementById('btn-test'),
+    };
+
+    const STORAGE_KEY = 'mls_daily_state_v4';
+    const DEFAULT_CENTRES = [
+      'MLS - Colombo 4',
+      'Finnish Preschool - Park Road',
+      'Forest School - Piliyandala',
+      'SenSoMo - One Galle Face',
+      'Forest School - Cape Weligama'
+    ];
+
+    const TABS = {
+      Admin: ['Today','Attendance','Shift Planner','Leaves','Holidays','Notices','Salary Requests','Staff','Settings','Export'],
+      Staff: ['My Dashboard','My Leaves','My Requests','Company Holidays','My Profile']
+    };
+
+    let state = {};
+    let user = null;
+    let worksite = '';
+
+    const id = () => (crypto.randomUUID ? crypto.randomUUID() : ('id_'+Date.now()+Math.random().toString(36).slice(2)));
+    const today = () => new Date().toISOString().slice(0,10);
+    const fmtDate = (d) => (d? new Date(d).toLocaleDateString('en-CA'):'');
+    const fmtDateTime = (d) => (d? new Date(d).toLocaleString():'');
+    const hhmmToMin = t => { if(!t||!t.includes(':')) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+    const minToHHMM = m => { m=Math.max(0,Math.round(m)); const h=Math.floor(m/60), mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); };
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    
+    function ensureDummyRange101_600(){
+      try{
+        state.staff ||= [];
+        state.profiles ||= {};
+        const haveIds = new Set(state.staff.map(s=>String(s.id)));
+        const existingPins = new Set(state.staff.map(s=>String(s.pin||'').replace(/\D+/g,'')));
+        function rand6(){
+          let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p));
+          existingPins.add(p); return p;
+        }
+        let changed = false;
+        for(let i=0;i<500;i++){
+          const sid = String(101+i);
+          if(!haveIds.has(sid)){
+            const pin = rand6();
+            state.staff.push({ id:sid, name:`Staff ${sid}`, role:'Teacher', pin, active:true });
+            state.profiles[sid] = state.profiles[sid] || { info:{ fullName:`Staff ${sid}`, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
+            changed = true;
+          }else{
+            const s = state.staff.find(x=>String(x.id)===sid);
+            const pin = String((s.pin||'').replace(/\D+/g,''));
+            if(pin.length !== 6){
+              s.pin = rand6(); changed = true;
+            }
+          }
+        }
+        if(changed) save();
+        ensureDummyRange101_600();
+      }catch(e){ /* no-op */ }
+    }
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){ state = JSON.parse(raw); }
+        else { seed(); save(); }
+        // migrations
+        state.settings = state.settings || {};
+        if(typeof state.settings.centres === 'string'){
+          state.settings.centres = state.settings.centres.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+        }
+        if(!Array.isArray(state.settings.centres) || !state.settings.centres.length){
+          state.settings.centres = DEFAULT_CENTRES.slice();
+        }
+        // Admin PIN migration → default to 311987 if missing/invalid
+        if(!/^\d{6}$/.test(String(state.settings.adminPin||''))){
+          state.settings.adminPin = '311987';
+        }
+        (state.loginLogs ||= []);
+
+        // One-time migration: ensure dummy range (2001–2500) has 6-digit random PINs
+        if(!state._seed500pins6){
+          const existingPins = new Set((state.staff||[]).map(s=>String(s.pin||'')));
+          const taken = new Set();
+          function rand6(){
+            let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p) || taken.has(p));
+            existingPins.add(p); taken.add(p); return p;
+          }
+          for(const s of (state.staff||[])){
+            const numId = Number(s.id);
+            const pin = String(s.pin||'').replace(/\D+/g,'');
+            if(numId>=101 && numId<=600 && pin.length!=6){
+              s.pin = rand6();
+            }
+          }
+          state._seed500pins6 = true;
+          save();
+        }
+      }catch(e){ seed(); save(); }
+      ensureDummyRange101_600();
+    }
+
+    function seed(){
+      state = {
+        settings:{
+          org:'MLS Innovations',
+          centres: DEFAULT_CENTRES.slice(),
+          webhook:'',
+          breakMins:30,
+          targetMins:480,
+          halfDayMins:240,
+          payPeriodStart: today(),
+          payPeriodEnd: today(),
+          adminPin: '311987'
+        },
+        staff:[
+          { id:'1001', name:'John Doe',  role:'Teacher',  pin:'1001', active:true },
+          { id:'1002', name:'Jane Smith',role:'Teacher',  pin:'1002', active:true },
+          { id:'1003', name:'Peter Jones',role:'Assistant', pin:'1003', active:false },
+        ],
+        profiles:{
+          '1001':{ info:{ fullName:'Johnathan Doe', idNo:'901234567V', dob:'1990-05-15', address:'123 Main St, Colombo', phone:'0771234567', email:'john.d@example.com', qualifications:'BSc in CS', joinDate:'2023-01-10', remarks:'Team lead for Project X' },
+                   performance:{ points:120, lastReward:'2025-07-01' },
+                   rewards:[{date:'2025-08-05', points:10, reason:'Security training 95%'}],
+                   documents:[] },
+          '1002':{ info:{ fullName:'Jane A. Smith', idNo:'927654321V', dob:'1992-11-20', address:'456 Galle Rd, Dehiwala', phone:'0719876543', email:'jane.s@example.com', qualifications:'BA in Graphic Design', joinDate:'2023-03-15', remarks:'' },
+                   performance:{ points:65, lastReward:null },
+                   rewards:[],
+                   documents:[] },
+        },
+        sessions:[
+          { id:id(), staffId:'1001', date: today(), centre: 'MLS - Colombo 4', clockIn:'09:02', clockOut:'17:30', breaks:[{start:'12:30', end:'13:00'}] },
+          { id:id(), staffId:'1002', date: today(), centre: 'MLS - Colombo 4', clockIn:'09:15', clockOut:'17:45', breaks:[] }
+        ],
+        leaves:[
+          { id:id(), staffId:'1001', type:'Half', date: today(), minutes:240, reason:'Doctor', status:'Approved', createdAt:new Date().toISOString() }
+        ],
+        holidays:[{ date:'2025-08-20', title:'Poya Day' }],
+        notices:[{ id:id(), title:'Welcome to MLS DAILY', body:'All centres please update rosters by Friday.', pinned:true, createdAt:new Date().toISOString() }],
+        shifts:[
+          { id:id(), date: today(), centre:'MLS - Colombo 4', staffId:'1001', start:'09:00', end:'17:30' }
+        ],
+        salary:[
+          { id:id(), staffId:'1002', amount:20000, reason:'Personal', status:'Pending', createdAt:new Date().toISOString() }
+        ],
+        inbox:[],
+        loginLogs:[]
+      };
+
+      
+      // ----- 500 dummy staff with UNIQUE 6-digit random PINs (IDs 101–600)
+      const existingPins = new Set(state.staff.map(s=>String(s.pin)));
+      function rand6(){
+        let p; do { p = String(Math.floor(100000 + Math.random()*900000)); } while (existingPins.has(p));
+        existingPins.add(p); return p;
+      }
+      for(let i=0;i<500;i++){
+        const sid = String(101+i);
+        const pin = rand6();
+        state.staff.push({ id:sid, name:`Staff ${sid}`, role:'Teacher', pin, active:true });
+        state.profiles[sid] = {
+          info:{ fullName:`Staff ${sid}`, joinDate: today() },
+          performance:{ points:0 },
+          rewards:[],
+          documents:[]
+        };
+      }
+      state._seed500pins6 = true;
+    
+    }
+
+    async function fetchCloudState(){
+      const url = state?.settings?.webhook;
+      if(!url) return false;
+      try{
+        const r = await fetch(url,{method:'GET'});
+        if(!r.ok) return false;
+        const data = await r.json();
+        if(data && typeof data==='object'){
+          state = data;
+          state.settings = state.settings || {};
+          if(typeof state.settings.centres === 'string'){
+            state.settings.centres = state.settings.centres.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+          }
+          if(!Array.isArray(state.settings.centres) || !state.settings.centres.length){
+            state.settings.centres = DEFAULT_CENTRES.slice();
+          }
+          if(!/^\d{6}$/.test(String(state.settings.adminPin||''))){
+            state.settings.adminPin = '311987';
+          }
+          (state.loginLogs ||= []);
+          ensureDummyRange101_600();
+          save();
+          populateCentres();
+          return true;
+        }
+      }catch(e){ console.warn('cloud load failed', e); }
+      return false;
+    }
+
+    async function syncToWebhook(){
+      const url = state?.settings?.webhook;
+      if(!url){ alert('Set Webhook in Settings.'); return; }
+      try{
+        const isFirebase = /\.json(\?|$)/.test(url);
+        if(isFirebase){
+          const r = await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+          if(!r.ok) throw new Error(r.status+' '+r.statusText);
+          alert('Synced to Firebase ✓');
+          return;
+        }
+        const isAppsScript = url.includes('script.google.com') || url.includes('googleusercontent.com/macros/');
+        if(isAppsScript){
+          const r = await fetch(url,{method:'POST',body:JSON.stringify(state)});
+          if(r.ok || r.type==='opaque'){ alert('Sync sent to Apps Script ✓'); return; }
+          throw new Error(r.status+' '+r.statusText);
+        }
+        const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+        if(r.ok || r.type==='opaque'){ alert('Sync sent ✓'); } else { throw new Error(r.status+' '+r.statusText); }
+      }catch(e){ alert('Sync failed: '+e.message); }
+    }
+
+    async function testWebhook(){
+      const url = state?.settings?.webhook;
+      if(!url){ alert('Webhook URL empty'); return; }
+      try{
+        const r = await fetch(url,{method:'GET'});
+        if(r.ok){
+          const ct=r.headers.get('content-type')||'';
+          if(ct.includes('application/json')){ await r.json(); alert('Webhook reachable ✓ (JSON)'); }
+          else alert('Webhook reachable ✓');
+        }else{
+          alert('Webhook responded '+r.status+' '+r.statusText);
+        }
+      }catch(e){ alert('Could not reach webhook: '+e.message); }
+    }
+
+    function populateCentres(){
+      const list = (state.settings && Array.isArray(state.settings.centres) && state.settings.centres.length)
+        ? state.settings.centres : DEFAULT_CENTRES;
+      DOM.worksite.innerHTML = '<option value="" disabled selected>Select centre</option>'
+        + list.map(c=>`<option>${c}</option>`).join('');
+    }
+
+    function dayWorkedMinutes(staffId, date){
+      const session = state.sessions.filter(s=>s.staffId===staffId && s.date===date);
+      let total = 0;
+      for(const s of session){
+        let mins = hhmmToMin(s.clockOut)-hhmmToMin(s.clockIn);
+        if(Array.isArray(s.breaks)){
+          for(const b of s.breaks){
+            mins -= (hhmmToMin(b.end)-hhmmToMin(b.start));
+          }
+        }
+        total += Math.max(0, mins);
+      }
+      if(session.length) total = Math.max(0, total - (state.settings.breakMins||30));
+      const leaves = state.leaves.filter(l=>l.staffId===staffId && l.date===date && l.status==='Approved');
+      if(leaves.some(l=>l.type==='Full')) return 0;
+      const short = leaves.filter(l=>l.type==='Short').reduce((a,b)=>a+(b.minutes||0),0);
+      total -= short;
+      if(leaves.some(l=>l.type==='Half')){
+        total = Math.min(total, state.settings.halfDayMins||240);
+      }
+      return Math.max(0,total);
+    }
+
+    function sanitizePIN(v){ return String(v||'').normalize('NFKC').replace(/\D+/g,''); }
+
+    async function handleLogin(e){
+      e.preventDefault();
+      DOM.err.textContent='';
+      const centre = DOM.worksite.value;
+      const pin = sanitizePIN(DOM.pin.value);
+      if(!centre){ DOM.err.textContent='Please select a centre.'; return; }
+      if(!pin){ DOM.err.textContent='Enter PIN.'; return; }
+
+      function matchLocal(p){
+        if(p===String(state.settings.adminPin||'311987')) return { id:'admin', name:'Admin', role:'Admin', active:true };
+        const found = (state.staff||[]).find(s => sanitizePIN(s.pin)===p && s.active!==false);
+        if(found) return { id:found.id, name:found.name, role:'Staff', active:true };
+        return null;
+      }
+
+      let u = matchLocal(pin);
+      if(!u){
+        await fetchCloudState();
+        u = matchLocal(pin);
+      }
+      if(!u){ DOM.err.textContent='Invalid PIN or inactive account.'; return; }
+
+      user = u; worksite = centre;
+      state.loginLogs.unshift({ id:id(), staffId:u.id, centre, atISO:new Date().toISOString() });
+      save();
+
+      DOM.login.classList.add('hidden');
+      DOM.app.classList.remove('hidden');
+      renderHeader();
+      renderTabs();
+      show(user.role==='Admin' ? 'Today' : 'My Dashboard');
+      DOM.pin.value='';
+    }
+
+    function renderHeader(){
+      DOM.badge.classList.remove('hidden');
+      DOM.logout.classList.remove('hidden');
+      DOM.badge.textContent = (user.role==='Admin' ? 'ADMIN' : 'STAFF — '+user.name);
+      DOM.badge.className = 'badge ' + (user.role==='Admin' ? 'badge-admin' : 'badge-staff');
+    }
+
+    function renderTabs(){
+      const tabs = TABS[user.role];
+      DOM.tabs.innerHTML = tabs.map(t=>`<button class="tab" data-view="${t}">${t}</button>`).join('');
+      DOM.tabs.querySelectorAll('.tab').forEach(btn=>{
+        btn.addEventListener('click', ()=> show(btn.dataset.view));
+      });
+    }
+
+    function show(name){
+      DOM.tabs.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+      let view = document.getElementById('v-'+name.replace(/\s+/g,''));
+      if(!view){ view = document.createElement('div'); view.id='v-'+name.replace(/\s+/g,''); DOM.views.appendChild(view); }
+      DOM.views.querySelectorAll(':scope > div').forEach(d=>d.classList.add('hidden'));
+      view.classList.remove('hidden');
+
+      const fn = RENDER['render'+name.replace(/\s+/g,'')];
+      if(fn) fn(view); else view.innerHTML = `<div class="card"><h3>${name}</h3><p>Under construction.</p></div>`;
+    }
+
+    const RENDER = {
+      renderToday(container){
+        const centres = state.settings.centres;
+        const todayDate = today();
+        const working = state.sessions.filter(s=>s.date===todayDate).map(s=>({ ...s, name: (state.staff.find(x=>x.id===s.staffId)||{}).name||s.staffId }));
+        container.innerHTML = `
+          <div class="card">
+            <h3>Who is in today (${fmtDate(todayDate)})</h3>
+            <div class="row cols-2" style="margin-top:10px">
+              ${centres.map(c=>{
+                const crows = working.filter(w=>w.centre===c).sort((a,b)=>a.clockIn.localeCompare(b.clockIn));
+                return `
+                <div class="card" style="margin:0">
+                  <h4 style="margin-top:0">${c}</h4>
+                  <table>
+                    <thead><tr><th>Staff</th><th>In</th><th>Out</th><th>Worked</th></tr></thead>
+                    <tbody>
+                      ${crows.length? crows.map(r=>`<tr><td>${r.name}</td><td>${r.clockIn}</td><td>${r.clockOut||'-'}</td><td>${minToHHMM(dayWorkedMinutes(r.staffId, r.date))}</td></tr>`).join('')
+                        : `<tr><td colspan="4" class="subtle">No sessions yet.</td></tr>`}
+                    </tbody>
+                  </table>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      },
+      renderAttendance(container){
+        const start = today().slice(0,8)+'01';
+        const end = today();
+        container.innerHTML = `
+          <div class="card">
+            <h3>Attendance Log</h3>
+            <div class="row cols-4">
+              <div><label>Start</label><input type="date" id="a-start" value="${start}"></div>
+              <div><label>End</label><input type="date" id="a-end" value="${end}"></div>
+              <div><label>Staff</label><select id="a-staff"><option value="all">All</option>${state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+              <div><label>Centre</label><select id="a-centre"><option value="all">All</option>${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+            </div>
+            <div style="margin-top:10px"><button id="a-filter" class="btn primary">Filter</button></div>
+            <div class="card" style="margin-top:10px">
+              <div class="subtle">Tip: click a row to see session detail.</div>
+              <div class="table-wrap" style="max-height:420px;overflow:auto;margin-top:8px">
+                <table id="a-table"><thead><tr><th>Date</th><th>Staff</th><th>Centre</th><th>Worked (m)</th><th>Worked (hh:mm)</th></tr></thead><tbody><tr><td colspan="5" class="subtle">Apply filters.</td></tr></tbody></table>
+              </div>
+            </div>
+          </div>
+        `;
+        container.querySelector('#a-filter').onclick = () => {
+          const s = container.querySelector('#a-start').value;
+          const e = container.querySelector('#a-end').value;
+          const st = container.querySelector('#a-staff').value;
+          const ce = container.querySelector('#a-centre').value;
+          const days = new Set(state.sessions.filter(x=>x.date>=s && x.date<=e && (st==='all'||x.staffId===st) && (ce==='all'||x.centre===ce)).map(x=>`${x.staffId}|${x.date}|${x.centre}`));
+          const rows = [];
+          days.forEach(key=>{
+            const [sid,d,c] = key.split('|');
+            const mins = dayWorkedMinutes(sid,d);
+            const name = (state.staff.find(s=>s.id===sid)||{}).name||sid;
+            rows.push({d,name,c,mins,sid});
+          });
+          rows.sort((a,b)=> b.d.localeCompare(a.d) || a.name.localeCompare(b.name));
+          const tb = container.querySelector('#a-table tbody');
+          tb.innerHTML = rows.length? rows.map(r=>`<tr data-s="${r.sid}" data-d="${r.d}" data-c="${r.c}" style="cursor:pointer"><td>${fmtDate(r.d)}</td><td>${r.name}</td><td>${r.c}</td><td>${r.mins}</td><td>${minToHHMM(r.mins)}</td></tr>`).join('') : `<tr><td colspan="5" class="subtle">No data.</td></tr>`;
+          tb.querySelectorAll('tr[data-s]').forEach(tr=>{
+            tr.onclick = () => {
+              const sid = tr.dataset.s, d = tr.dataset.d, c = tr.dataset.c;
+              const sessions = state.sessions.filter(s=>s.staffId===sid && s.date===d && s.centre===c);
+              alert(`${(state.staff.find(s=>s.id===sid)||{}).name||sid} @ ${c}\n${fmtDate(d)}\n\n` + (sessions.length? sessions.map(s=>`In: ${s.clockIn}  Out: ${s.clockOut||'-'}  Breaks: ${(s.breaks||[]).map(b=>b.start+'-'+b.end).join(', ')||'-'}`).join('\n') : 'No sessions.'));
+            };
+          });
+        };
+      },
+      renderShiftPlanner(container){
+        container.innerHTML = `
+          <div class="card">
+            <h3>Shift Planner</h3>
+            <div class="row cols-4">
+              <div><label>Date</label><input type="date" id="sp-date" value="${today()}"></div>
+              <div><label>Centre</label><select id="sp-centre">${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+              <div><label>Staff</label><select id="sp-staff">${state.staff.filter(s=>s.active!==false).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+              <div class="row cols-2">
+                <div><label>Start</label><input type="time" id="sp-start" value="09:00"></div>
+                <div><label>End</label><input type="time" id="sp-end" value="17:30"></div>
+              </div>
+            </div>
+            <div style="margin-top:10px"><button id="sp-add" class="btn primary">Add / Update</button></div>
+            <div class="card" style="margin-top:10px">
+              <div class="row cols-3">
+                <div><label>View Date</label><input type="date" id="sv-date" value="${today()}"></div>
+                <div><label>Centre</label><select id="sv-centre"><option value="all">All</option>${state.settings.centres.map(c=>`<option>${c}</option>`).join('')}</select></div>
+                <div style="display:flex;align-items:flex-end"><button id="sv-refresh" class="btn">Refresh</button></div>
+              </div>
+              <div style="margin-top:8px;max-height:420px;overflow:auto">
+                <table id="sp-table"><thead><tr><th>Date</th><th>Centre</th><th>Staff</th><th>Start</th><th>End</th><th></th></tr></thead><tbody></tbody></table>
+              </div>
+            </div>
+          </div>
+        `;
+        container.querySelector('#sp-add').onclick = () => {
+          const d = container.querySelector('#sp-date').value;
+          const c = container.querySelector('#sp-centre').value;
+          const sid = container.querySelector('#sp-staff').value;
+          const st = container.querySelector('#sp-start').value;
+          const en = container.querySelector('#sp-end').value;
+          let rec = state.shifts.find(s=>s.date===d && s.centre===c && s.staffId===sid);
+          if(rec){ rec.start=st; rec.end=en; }
+          else { state.shifts.push({ id:id(), date:d, centre:c, staffId:sid, start:st, end:en }); }
+          save(); draw();
+        };
+        container.querySelector('#sv-refresh').onclick = draw;
+        function draw(){
+          const d = container.querySelector('#sv-date').value;
+          const c = container.querySelector('#sv-centre').value;
+          const rows = state.shifts.filter(s=>s.date===d && (c==='all'||s.centre===c)).map(s=>({ ...s, name:(state.staff.find(x=>x.id===s.staffId)||{}).name||s.staffId }));
+          const tb = container.querySelector('#sp-table tbody');
+          tb.innerHTML = rows.length? rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${r.centre}</td><td>${r.name}</td><td>${r.start}</td><td>${r.end}</td><td><button data-id="${r.id}" class="btn danger" style="padding:6px 10px">Remove</button></td></tr>`).join('') : `<tr><td colspan="6" class="subtle">No shifts.</td></tr>`;
+          tb.querySelectorAll('button[data-id]').forEach(b=>{
+            b.onclick=()=>{ const idx = state.shifts.findIndex(x=>x.id===b.dataset.id); if(idx>-1){ state.shifts.splice(idx,1); save(); draw(); } };
+          });
+        }
+        draw();
+      },
+      renderLeaves(container){
+        const all = state.leaves.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Submit Leave (Admin)</h3>
+              <div class="row cols-2">
+                <div><label>Staff</label><select id="lv-staff">${state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+                <div><label>Date</label><input type="date" id="lv-date" value="${today()}"></div>
+                <div><label>Type</label><select id="lv-type"><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="lv-mins-wrap"><label>Minutes (Short)</label><input id="lv-mins" type="number" placeholder="e.g. 60"></div>
+                <div class="row cols-1"><label>Reason</label><textarea id="lv-reason" rows="2"></textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="lv-add" class="btn primary">Submit</button></div>
+            </div>
+            <div class="card">
+              <h3>All Leave Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Applied</th><th>Date</th><th>Staff</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody id="lv-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        const wrap = container.querySelector('#lv-mins-wrap');
+        container.querySelector('#lv-type').onchange = e => wrap.style.display = (e.target.value==='Short'?'block':'none');
+        container.querySelector('#lv-add').onclick = () => {
+          const obj = {
+            id:id(), staffId:container.querySelector('#lv-staff').value, type:container.querySelector('#lv-type').value,
+            date:container.querySelector('#lv-date').value, minutes: Number(container.querySelector('#lv-mins').value)||0,
+            reason:container.querySelector('#lv-reason').value, status:'Approved', createdAt:new Date().toISOString()
+          };
+          if(obj.type==='Half') obj.minutes = state.settings.halfDayMins||240;
+          if(obj.type==='Full') obj.minutes = state.settings.targetMins||480;
+          state.leaves.push(obj); save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#lv-tb');
+          const list = state.leaves.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+          tb.innerHTML = list.map(l=>`<tr>
+            <td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${(state.staff.find(s=>s.id===l.staffId)||{}).name||l.staffId}</td>
+            <td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td>
+            <td><span class="status ${l.status}">${l.status}</span></td>
+            <td>
+              <button class="btn" data-s="Approved" data-id="${l.id}">Approve</button>
+              <button class="btn" data-s="Pending" data-id="${l.id}">Pend</button>
+              <button class="btn danger" data-s="Rejected" data-id="${l.id}">Reject</button>
+            </td>
+          </tr>`).join('');
+          tb.querySelectorAll('button[data-id]').forEach(b=>{
+            b.onclick=()=>{ const l = state.leaves.find(x=>x.id===b.dataset.id); if(l){ l.status=b.dataset.s; save(); draw(); } };
+          });
+        }
+        draw();
+      },
+      renderHolidays(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Add Holiday</h3>
+              <div class="row cols-2">
+                <div><label>Date</label><input type="date" id="hd-date" value="${today()}"></div>
+                <div><label>Title</label><input id="hd-title" placeholder="Holiday name"></div>
+              </div>
+              <div style="margin-top:10px"><button id="hd-add" class="btn primary">Add</button></div>
+            </div>
+            <div class="card">
+              <h3>Upcoming Holidays</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Date</th><th>Title</th><th></th></tr></thead><tbody id="hd-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#hd-add').onclick=()=>{
+          state.holidays.push({date:container.querySelector('#hd-date').value, title:container.querySelector('#hd-title').value}); save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#hd-tb');
+          const list = state.holidays.slice().sort((a,b)=> a.date.localeCompare(b.date));
+          tb.innerHTML = list.length? list.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td><td><button class="btn danger" data-d="${h.date}" data-t="${h.title}">Remove</button></td></tr>`).join('') : `<tr><td colspan="3" class="subtle">None</td></tr>`;
+          tb.querySelectorAll('button[data-d]').forEach(b=> b.onclick=()=>{ const i = state.holidays.findIndex(x=>x.date===b.dataset.d && x.title===b.dataset.t); if(i>-1){ state.holidays.splice(i,1); save(); draw(); } });
+        }
+        draw();
+      },
+      renderNotices(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Post Notice</h3>
+              <div class="row cols-2">
+                <div><label>Title</label><input id="nc-title"></div>
+                <div><label>Pinned</label><select id="nc-pin"><option value="true">Yes</option><option value="false">No</option></select></div>
+              </div>
+              <div><label>Body</label><textarea id="nc-body" rows="3"></textarea></div>
+              <div style="margin-top:10px"><button id="nc-add" class="btn primary">Publish</button></div>
+            </div>
+            <div class="card">
+              <h3>Notice Board</h3>
+              <div id="nc-list" class="row cols-2"></div>
+            </div>
+          </div>`;
+        container.querySelector('#nc-add').onclick=()=>{
+          state.notices.unshift({id:id(), title:container.querySelector('#nc-title').value, body:container.querySelector('#nc-body').value, pinned:container.querySelector('#nc-pin').value==='true', createdAt:new Date().toISOString()});
+          save(); draw();
+        };
+        function draw(){
+          const box = container.querySelector('#nc-list');
+          const list = state.notices.slice().sort((a,b)=> (b.pinned?-1:1) - (a.pinned?-1:1) || new Date(b.createdAt)-new Date(a.createdAt));
+          box.innerHTML = list.map(n=>`
+            <div class="card" style="margin:0">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <h4 style="margin:0">${n.title}</h4>
+                ${n.pinned?'<span class="tag">Pinned</span>':''}
+              </div>
+              <div class="subtle" style="margin:4px 0">${fmtDateTime(n.createdAt)}</div>
+              <p>${n.body||''}</p>
+              <div class="sticky-footer"><button class="btn danger" data-id="${n.id}">Remove</button></div>
+            </div>`).join('');
+          box.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const i = state.notices.findIndex(x=>x.id===b.dataset.id); if(i>-1){ state.notices.splice(i,1); save(); draw(); } });
+        }
+        draw();
+      },
+      renderSalaryRequests(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>All Salary Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Requested</th><th>Staff</th><th>Amount</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody id="sr-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        function draw(){
+          const tb = container.querySelector('#sr-tb');
+          const list = state.salary.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+          tb.innerHTML = list.length? list.map(r=>`<tr>
+            <td>${fmtDateTime(r.createdAt)}</td>
+            <td>${(state.staff.find(s=>s.id===r.staffId)||{}).name||r.staffId}</td>
+            <td>${r.amount}</td><td>${r.reason||''}</td>
+            <td><span class="status ${r.status}">${r.status}</span></td>
+            <td>
+              <button class="btn" data-s="Approved" data-id="${r.id}">Approve</button>
+              <button class="btn" data-s="Pending" data-id="${r.id}">Pend</button>
+              <button class="btn danger" data-s="Rejected" data-id="${r.id}">Reject</button>
+            </td>
+          </tr>`).join('') : `<tr><td colspan="6" class="subtle">No requests.</td></tr>`;
+          tb.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const r = state.salary.find(x=>x.id===b.dataset.id); if(r){ r.status=b.dataset.s; save(); draw(); } });
+        }
+        draw();
+      },
+      renderStaff(container){
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Add Staff</h3>
+              <div class="row cols-3">
+                <div><label>ID</label><input id="st-id"></div>
+                <div><label>Name</label><input id="st-name"></div>
+                <div><label>Role</label><input id="st-role" placeholder="Teacher/Assistant"></div>
+                <div><label>PIN</label><input id="st-pin" inputmode="numeric" placeholder="6 digits"></div>
+                <div><label>Status</label><select id="st-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+              </div>
+              <div style="margin-top:10px"><button id="st-add" class="btn primary">Add</button></div>
+            </div>
+            <div class="card">
+              <h3>Staff</h3>
+              <div style="max-height:460px;overflow:auto">
+                <table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="st-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#st-add').onclick = () => {
+          const idv = container.querySelector('#st-id').value.trim();
+          if(!idv){ alert('ID required'); return; }
+          if(state.staff.some(s=>s.id===idv)){ alert('ID exists'); return; }
+          const pinRaw = String(container.querySelector('#st-pin').value||'').replace(/\D+/g,'');
+          if(pinRaw && pinRaw.length!==6){ alert('PIN should be 6 digits'); return; }
+          const obj = { id:idv, name:container.querySelector('#st-name').value.trim(), role:container.querySelector('#st-role').value.trim(),
+            pin: pinRaw || String(Math.floor(100000 + Math.random()*900000)), active:container.querySelector('#st-active').value==='true' };
+          state.staff.push(obj);
+          if(!state.profiles[idv]) state.profiles[idv] = { info:{ fullName:obj.name, joinDate: today() }, performance:{ points:0 }, rewards:[], documents:[] };
+          save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#st-tb');
+          tb.innerHTML = state.staff.map(s=>`<tr>
+            <td>${s.id}</td><td>${s.name}</td><td>${s.role||''}</td>
+            <td><span class="status ${s.active?'Approved':'Rejected'}">${s.active?'Active':'Inactive'}</span></td>
+            <td>
+              <button class="btn" data-id="${s.id}" data-a="${s.active?'deact':'act'}">${s.active?'Deactivate':'Activate'}</button>
+              <button class="btn" data-id="${s.id}" data-a="profile">Profile</button>
+              <button class="btn danger" data-id="${s.id}" data-a="remove">Remove</button>
+            </td>
+          </tr>`).join('');
+          tb.querySelectorAll('button[data-id]').forEach(b=> b.onclick = () => {
+            const s = state.staff.find(x=>x.id===b.dataset.id);
+            if(!s) return;
+            if(b.dataset.a==='deact'){ s.active=false; }
+            else if(b.dataset.a==='act'){ s.active=true; }
+            else if(b.dataset.a==='remove'){ if(confirm('Remove staff?')){ state.staff = state.staff.filter(x=>x.id!==s.id); delete state.profiles[s.id]; } }
+            else if(b.dataset.a==='profile'){ openProfileAdmin(s.id); return; }
+            save(); draw();
+          });
+        }
+        draw();
+      },
+      renderSettings(container){
+        container.innerHTML = `
+          <div class="card">
+            <h3>Settings</h3>
+            <div class="row cols-3">
+              <div><label>Organization</label><input id="se-org" value="${state.settings.org||''}"></div>
+              <div><label>Daily Break (mins)</label><input id="se-break" type="number" value="${state.settings.breakMins||30}"></div>
+              <div><label>Target Work (mins)</label><input id="se-target" type="number" value="${state.settings.targetMins||480}"></div>
+              <div><label>Half-day Cap (mins)</label><input id="se-half" type="number" value="${state.settings.halfDayMins||240}"></div>
+              <div><label>Pay Start</label><input id="se-ps" type="date" value="${state.settings.payPeriodStart||today()}"></div>
+              <div><label>Pay End</label><input id="se-pe" type="date" value="${state.settings.payPeriodEnd||today()}"></div>
+              <div class="row cols-1">
+                <label>Centres (one per line)</label>
+                <textarea id="se-centres" rows="5">${(state.settings.centres||[]).join('\n')}</textarea>
+              </div>
+              <div class="row cols-1">
+                <label>Webhook URL</label>
+                <input id="se-webhook" value="${state.settings.webhook||''}" placeholder="Firebase .json or Apps Script URL">
+              </div>
+              <div class="row cols-1">
+                <label>Admin PIN (6 digits)</label>
+                <input id="se-adminpin" inputmode="numeric" placeholder="311987" value="${state.settings.adminPin||'311987'}">
+                <div class="subtle">Changing this updates the Admin login immediately. Keep it secret.</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button id="se-save" class="btn primary">Save</button>
+              <button id="se-test" class="btn">Test Webhook</button>
+              <button id="se-sync" class="btn">Sync → Webhook</button>
+              <button id="se-load" class="btn">Load from Webhook</button>
+            </div>
+          </div>`;
+        container.querySelector('#se-save').onclick=()=>{
+          state.settings.org = container.querySelector('#se-org').value;
+          state.settings.breakMins = container.querySelector('#se-break').valueAsNumber||30;
+          state.settings.targetMins = container.querySelector('#se-target').valueAsNumber||480;
+          state.settings.halfDayMins = container.querySelector('#se-half').valueAsNumber||240;
+          state.settings.payPeriodStart = container.querySelector('#se-ps').value;
+          state.settings.payPeriodEnd = container.querySelector('#se-pe').value;
+          const centres = container.querySelector('#se-centres').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+          state.settings.centres = centres.length? centres : DEFAULT_CENTRES.slice();
+          state.settings.webhook = container.querySelector('#se-webhook').value.trim();
+          const ap = String((container.querySelector('#se-adminpin').value||'').replace(/\D+/g,''));
+          if(!/^\d{6}$/.test(ap)){ alert('Admin PIN must be 6 digits.'); return; }
+          state.settings.adminPin = ap;
+          save(); populateCentres(); alert('Saved.');
+        };
+        container.querySelector('#se-test').onclick=testWebhook;
+        container.querySelector('#se-sync').onclick=syncToWebhook;
+        container.querySelector('#se-load').onclick=async()=>{ const ok=await fetchCloudState(); alert(ok?'Loaded ✓':'Load failed'); };
+      },
+      renderExport(container){
+        
+        container.innerHTML = `
+          <div class="card">
+            <h3>Export</h3>
+          <div class="card" style="margin-top:12px">
+            <h3>PIN Directory — Dummy Staff (101–600)</h3>
+            <div class="row cols-3">
+              <div><label>Search Name/ID</label><input id="pd-q" placeholder="e.g., 123 or Staff 150"></div>
+              <div><label>Only Active</label><select id="pd-active"><option value="all">All</option><option value="true">Active</option><option value="false">Inactive</option></select></div>
+              <div style="display:flex;align-items:flex-end"><button class="btn" id="pd-refresh">Refresh</button></div>
+            </div>
+            <div style="max-height:420px;overflow:auto;margin-top:8px">
+              <table id="pd-table">
+                <thead><tr><th>ID</th><th>Name</th><th>PIN</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+    
+            <div class="row cols-3">
+              <button class="btn" id="ex-staff">Staff CSV</button>
+              <button class="btn" id="ex-dummy">Dummy Staff (101–600) CSV</button>
+              <button class="btn" id="ex-sessions">Sessions CSV</button>
+              <button class="btn" id="ex-leaves">Leaves CSV</button>
+              <button class="btn" id="ex-holidays">Holidays CSV</button>
+              <button class="btn primary" id="ex-json">Full Backup (JSON)</button>
+            </div>
+          </div>`;
+        function download(name, mime, content){
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+          a.download = name; a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+        }
+        function csv(arr){
+          if(!arr.length) return '';
+          const keys = Object.keys(arr[0]);
+          return [keys.join(','), ...arr.map(o=> keys.map(k=> JSON.stringify(o[k]??'')).join(',')) ].join('\n');
+        }
+        container.querySelector('#ex-staff').onclick=()=> download('staff.csv','text/csv', csv(state.staff));
+        container.querySelector('#ex-sessions').onclick=()=> download('sessions.csv','text/csv', csv(state.sessions));
+        container.querySelector('#ex-dummy').onclick=()=>{
+          const list = (state.staff||[]).filter(s=>Number(s.id)>=101 && Number(s.id)<=600);
+          download('dummy_staff_101_600.csv','text/csv', csv(list));
+        };
+        container.querySelector('#ex-leaves').onclick=()=> download('leaves.csv','text/csv', csv(state.leaves));
+        container.querySelector('#ex-holidays').onclick=()=> download('holidays.csv','text/csv', csv(state.holidays));
+        container.querySelector('#ex-json').onclick=()=> download(`mls_daily_${today()}.json`,'application/json', JSON.stringify(state,null,2));
+        // PIN Directory draw
+        function pdDraw(){
+          const q = (container.querySelector('#pd-q')?.value||'').toLowerCase();
+          const a = (container.querySelector('#pd-active')?.value||'all');
+          const list = (state.staff||[]).filter(s=>Number(s.id)>=101 && Number(s.id)<=600).filter(s=>{
+            const hit = !q || s.id.includes(q) || (s.name||'').toLowerCase().includes(q) || String(s.pin||'').includes(q);
+            const on = (a==='all') || (String(!!s.active)===a);
+            return hit && on;
+          });
+          const tb = container.querySelector('#pd-table tbody');
+          if(tb){ tb.innerHTML = list.map(s=>`<tr><td>${s.id}</td><td>${s.name||''}</td><td><code>${s.pin||''}</code></td><td>${s.active!==false?'Active':'Inactive'}</td></tr>`).join('') || `<tr><td colspan="4" class="subtle">No results.</td></tr>`; }
+        }
+        container.querySelector('#pd-refresh')?.addEventListener('click', pdDraw);
+        container.querySelector('#pd-q')?.addEventListener('input', pdDraw);
+        container.querySelector('#pd-active')?.addEventListener('change', pdDraw);
+        pdDraw();
+      },
+      renderMyDashboard(container){
+        const sid = user.id;
+        const monthStart = new Date(); monthStart.setDate(1); const ms = monthStart.toISOString().slice(0,10);
+        const monthSessions = state.sessions.filter(s=>s.staffId===sid && s.date>=ms);
+        const totalMins = Array.from(new Set(monthSessions.map(s=>s.date))).reduce((acc,d)=> acc + dayWorkedMinutes(sid,d), 0);
+        const target = (state.settings.targetMins||480) * new Set(monthSessions.map(s=>s.date)).size;
+        const overtime = Math.max(0, totalMins - target);
+        const profile = state.profiles[sid]||{info:{},performance:{points:0},rewards:[]};
+
+        container.innerHTML = `
+          <div class="card">
+            <h3>My Summary (This Month)</h3>
+            <div class="kpis">
+              <div class="kpi"><div class="value">${minToHHMM(totalMins)}</div><div class="subtle">Worked Hours</div></div>
+              <div class="kpi"><div class="value">${minToHHMM(overtime)}</div><div class="subtle">Overtime</div></div>
+              <div class="kpi"><div class="value">${profile.performance?.points||0}</div><div class="subtle">Points</div></div>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <h3>Record Attendance (Today)</h3>
+              <div class="row cols-2">
+                <div><label>Clock In</label><input type="time" id="md-in" value="09:00"></div>
+                <div><label>Clock Out</label><input type="time" id="md-out" value="17:30"></div>
+              </div>
+              <div class="row cols-2">
+                <div><label>Break Start</label><input type="time" id="md-bs" value=""></div>
+                <div><label>Break End</label><input type="time" id="md-be" value=""></div>
+              </div>
+              <div style="margin-top:10px"><button id="md-add" class="btn primary">Add Session</button></div>
+            </div>
+            <div class="card">
+              <h3>Recent Sessions</h3>
+              <div style="max-height:360px;overflow:auto">
+                <table><thead><tr><th>Date</th><th>Centre</th><th>In</th><th>Out</th><th>Breaks</th><th>Worked</th></tr></thead><tbody id="md-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#md-add').onclick=()=>{
+          const ci = container.querySelector('#md-in').value;
+          const co = container.querySelector('#md-out').value;
+          const bs = container.querySelector('#md-bs').value;
+          const be = container.querySelector('#md-be').value;
+          const rec = { id:id(), staffId:sid, date:today(), centre:worksite, clockIn:ci, clockOut:co, breaks:[] };
+          if(bs && be) rec.breaks.push({start:bs, end:be});
+          state.sessions.push(rec); save(); draw();
+        };
+        function draw(){
+          const list = state.sessions.filter(s=>s.staffId===sid).sort((a,b)=> b.date.localeCompare(a.date)).slice(0,20);
+          const tb = container.querySelector('#md-tb');
+          tb.innerHTML = list.map(s=>`<tr><td>${fmtDate(s.date)}</td><td>${s.centre}</td><td>${s.clockIn}</td><td>${s.clockOut||'-'}</td><td>${(s.breaks||[]).map(b=>b.start+'-'+b.end).join(', ')||'-'}</td><td>${minToHHMM(dayWorkedMinutes(s.staffId,s.date))}</td></tr>`).join('');
+        }
+        draw();
+      },
+      renderMyLeaves(container){
+        const my = state.leaves.filter(l=>l.staffId===user.id).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Request Leave</h3>
+              <div class="row cols-2">
+                <div><label>Date</label><input id="sl-date" type="date" value="${today()}"></div>
+                <div><label>Type</label><select id="sl-type"><option>Full</option><option>Half</option><option>Short</option></select></div>
+                <div id="sl-mins-wrap"><label>Minutes (Short)</label><input id="sl-mins" type="number" placeholder="60"></div>
+                <div class="row cols-1"><label>Reason</label><textarea id="sl-reason" rows="2"></textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="sl-send" class="btn primary">Submit</button></div>
+            </div>
+            <div class="card">
+              <h3>My Leave History</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Applied</th><th>Date</th><th>Type</th><th>Status</th></tr></thead><tbody id="sl-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        const wrap = container.querySelector('#sl-mins-wrap');
+        container.querySelector('#sl-type').onchange=e=> wrap.style.display=(e.target.value==='Short'?'block':'none');
+        container.querySelector('#sl-send').onclick=()=>{
+          const obj = { id:id(), staffId:user.id, type:container.querySelector('#sl-type').value, date:container.querySelector('#sl-date').value,
+                        minutes:Number(container.querySelector('#sl-mins').value)||0, reason:container.querySelector('#sl-reason').value,
+                        status:'Pending', createdAt:new Date().toISOString() };
+          if(obj.type==='Half') obj.minutes = state.settings.halfDayMins||240;
+          if(obj.type==='Full') obj.minutes = state.settings.targetMins||480;
+          state.leaves.push(obj); save(); draw();
+          alert('Leave request submitted.');
+        };
+        function draw(){
+          const tb = container.querySelector('#sl-tb');
+          tb.innerHTML = my.map(l=>`<tr><td>${fmtDateTime(l.createdAt)}</td><td>${fmtDate(l.date)}</td><td>${l.type}${l.type==='Short'?` (${l.minutes}m)`:''}</td><td><span class="status ${l.status}">${l.status}</span></td></tr>`).join('') || `<tr><td colspan="4" class="subtle">No leaves yet.</td></tr>`;
+        }
+        draw();
+      },
+      renderMyRequests(container){
+        const mine = state.salary.filter(r=>r.staffId===user.id).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>Request Salary Advance</h3>
+              <div class="row cols-2">
+                <div><label>Amount</label><input id="rq-amt" type="number" placeholder="20000"></div>
+                <div class="row cols-1"><label>Reason</label><input id="rq-reason"></div>
+              </div>
+              <div style="margin-top:10px"><button id="rq-send" class="btn primary">Send</button></div>
+            </div>
+            <div class="card">
+              <h3>My Salary Requests</h3>
+              <div style="max-height:420px;overflow:auto">
+                <table><thead><tr><th>Requested</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody id="rq-tb"></tbody></table>
+              </div>
+            </div>
+          </div>`;
+        container.querySelector('#rq-send').onclick=()=>{
+          const amt = Number(container.querySelector('#rq-amt').value)||0;
+          const reason = container.querySelector('#rq-reason').value||'';
+          state.salary.unshift({ id:id(), staffId:user.id, amount:amt, reason, status:'Pending', createdAt:new Date().toISOString() });
+          save(); draw();
+        };
+        function draw(){
+          const tb = container.querySelector('#rq-tb');
+          tb.innerHTML = mine.length? mine.map(r=>`<tr><td>${fmtDateTime(r.createdAt)}</td><td>${r.amount}</td><td>${r.reason||''}</td><td><span class="status ${r.status}">${r.status}</span></td></tr>`).join('') : `<tr><td colspan="4" class="subtle">No requests.</td></tr>`;
+        }
+        draw();
+      },
+      renderCompanyHolidays(container){
+        const list = state.holidays.filter(h=> new Date(h.date)>= new Date(today())).sort((a,b)=> a.date.localeCompare(b.date));
+        container.innerHTML = `
+          <div class="card">
+            <h3>Upcoming Company Holidays</h3>
+            <div style="max-height:420px;overflow:auto">
+              <table><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>${list.length? list.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.title}</td></tr>`).join('') : `<tr><td colspan="2" class="subtle">No upcoming holidays.</td></tr>`}</tbody></table>
+            </div>
+          </div>`;
+      },
+      renderMyProfile(container){
+        const prof = state.profiles[user.id] || { info:{}, performance:{points:0}, rewards:[], documents:[] };
+        const info = prof.info||{};
+        container.innerHTML = `
+          <div class="grid">
+            <div class="card">
+              <h3>My Profile</h3>
+              <div class="row cols-2">
+                <div><label>Full Name</label><input id="pf-name" value="${info.fullName||''}"></div>
+                <div><label>ID No</label><input id="pf-idno" value="${info.idNo||''}"></div>
+                <div><label>DOB</label><input id="pf-dob" type="date" value="${info.dob||''}"></div>
+                <div><label>Phone</label><input id="pf-phone" value="${info.phone||''}"></div>
+                <div><label>Email</label><input id="pf-email" value="${info.email||''}"></div>
+                <div><label>Joined</label><input id="pf-join" type="date" value="${info.joinDate||''}"></div>
+                <div class="row cols-1"><label>Address</label><textarea id="pf-address" rows="2">${info.address||''}</textarea></div>
+                <div class="row cols-1"><label>Qualifications</label><input id="pf-qual" value="${info.qualifications||''}"></div>
+                <div class="row cols-1"><label>Remarks</label><textarea id="pf-remarks" rows="2">${info.remarks||''}</textarea></div>
+              </div>
+              <div style="margin-top:10px"><button id="pf-save" class="btn primary">Save</button></div>
+              <div class="kpis" style="margin-top:10px">
+                <div class="kpi"><div class="value">${(prof.performance?.points)||0}</div><div class="subtle">Points</div></div>
+                <div class="kpi"><div class="value">${prof.rewards.length}</div><div class="subtle">Rewards</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3>My Documents</h3>
+              <div><input id="pf-file" type="file" multiple /></div>
+              <div id="pf-docs" class="row cols-2" style="margin-top:10px"></div>
+            </div>
+          </div>`;
+        container.querySelector('#pf-save').onclick=()=>{
+          const P = state.profiles[user.id] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+          const I = P.info;
+          I.fullName = container.querySelector('#pf-name').value;
+          I.idNo = container.querySelector('#pf-idno').value;
+          I.dob = container.querySelector('#pf-dob').value;
+          I.phone = container.querySelector('#pf-phone').value;
+          I.email = container.querySelector('#pf-email').value;
+          I.joinDate = container.querySelector('#pf-join').value;
+          I.address = container.querySelector('#pf-address').value;
+          I.qualifications = container.querySelector('#pf-qual').value;
+          I.remarks = container.querySelector('#pf-remarks').value;
+          save(); alert('Saved.');
+        };
+        const input = container.querySelector('#pf-file');
+        input.onchange = async (e)=>{
+          const files = Array.from(e.target.files||[]);
+          if(!files.length) return;
+          const P = state.profiles[user.id] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+          for(const f of files){
+            const data = await f.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+            P.documents.push({ id:id(), name:f.name, type:f.type, size:f.size, data:'data:'+f.type+';base64,'+base64, addedAt:new Date().toISOString() });
+          }
+          save(); drawDocs();
+        };
+        function drawDocs(){
+          const P = state.profiles[user.id]||{documents:[]};
+          const box = container.querySelector('#pf-docs'); box.innerHTML = (P.documents||[]).map(d=>`
+            <div class="card" style="margin:0">
+              <div style="display:flex;justify-content:space-between;align-items:center"><strong>${d.name}</strong><span class="subtle">${Math.round(d.size/1024)} KB</span></div>
+              <div class="subtle">${fmtDateTime(d.addedAt)}</div>
+              <div class="sticky-footer">
+                <a class="btn" href="${d.data}" download="${d.name}">Download</a>
+                <button class="btn danger" data-id="${d.id}">Remove</button>
+              </div>
+            </div>`).join('') || '<div class="subtle">No documents uploaded.</div>';
+          box.querySelectorAll('button[data-id]').forEach(b=> b.onclick=()=>{ const P = state.profiles[user.id]; P.documents = P.documents.filter(x=>x.id!==b.dataset.id); save(); drawDocs(); });
+        }
+        drawDocs();
+      }
+    };
+
+    function openProfileAdmin(staffId){
+      const p = state.profiles[staffId] || { info:{}, performance:{points:0}, rewards:[], documents:[] };
+      const s = state.staff.find(x=>x.id===staffId);
+      const info = p.info || {};
+      const workedTotal = Array.from(new Set(state.sessions.filter(x=>x.staffId===staffId).map(x=>x.date))).reduce((acc,d)=> acc+dayWorkedMinutes(staffId,d),0);
+      const host = document.createElement('div');
+      host.className='card';
+      host.innerHTML = `
+        <h3>${s?.name||staffId} — Profile</h3>
+        <div class="kpis" style="margin-bottom:10px">
+          <div class="kpi"><div class="value">${fmtDate(info.joinDate)}</div><div class="subtle">Joined</div></div>
+          <div class="kpi"><div class="value">${minToHHMM(workedTotal)}</div><div class="subtle">Total Worked</div></div>
+          <div class="kpi"><div class="value">${p.performance?.points||0}</div><div class="subtle">Points</div></div>
+          <div class="kpi"><div class="value">${p.rewards.length}</div><div class="subtle">Rewards</div></div>
+        </div>
+        <div class="row cols-3">
+          <div><label>Full Name</label><input id="ap-name" value="${info.fullName||''}"></div>
+          <div><label>ID No</label><input id="ap-idno" value="${info.idNo||''}"></div>
+          <div><label>DOB</label><input id="ap-dob" type="date" value="${info.dob||''}"></div>
+          <div><label>Phone</label><input id="ap-phone" value="${info.phone||''}"></div>
+          <div><label>Email</label><input id="ap-email" value="${info.email||''}"></div>
+          <div><label>Joined</label><input id="ap-join" type="date" value="${info.joinDate||''}"></div>
+          <div class="row cols-1"><label>Address</label><textarea id="ap-address" rows="2">${info.address||''}</textarea></div>
+          <div class="row cols-1"><label>Qualifications</label><input id="ap-qual" value="${info.qualifications||''}"></div>
+          <div class="row cols-1"><label>Remarks</label><textarea id="ap-remarks" rows="2">${info.remarks||''}</textarea></div>
+        </div>
+        <div style="margin-top:10px"><button id="ap-save" class="btn primary">Save</button></div>
+        <div class="card" style="margin-top:10px">
+          <h4>Rewards</h4>
+          <div class="row cols-3">
+            <div><label>Date</label><input id="rw-date" type="date" value="${today()}"></div>
+            <div><label>Points</label><input id="rw-points" type="number" value="10"></div>
+            <div><label>Reason</label><input id="rw-reason" placeholder="Attended event"></div>
+          </div>
+          <div style="margin-top:8px"><button id="rw-add" class="btn">Add Reward</button></div>
+          <div style="max-height:260px;overflow:auto;margin-top:8px">
+            <table><thead><tr><th>Date</th><th>Points</th><th>Reason</th><th></th></tr></thead><tbody id="rw-tb"></tbody></table>
+          </div>
+        </div>
+      `;
+      const view = document.getElementById('v-Staff'); view.innerHTML=''; view.appendChild(host);
+      host.querySelector('#ap-save').onclick=()=>{
+        const P = state.profiles[staffId] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+        const I = P.info;
+        I.fullName = host.querySelector('#ap-name').value;
+        I.idNo = host.querySelector('#ap-idno').value;
+        I.dob = host.querySelector('#ap-dob').value;
+        I.phone = host.querySelector('#ap-phone').value;
+        I.email = host.querySelector('#ap-email').value;
+        I.joinDate = host.querySelector('#ap-join').value;
+        I.address = host.querySelector('#ap-address').value;
+        I.qualifications = host.querySelector('#ap-qual').value;
+        I.remarks = host.querySelector('#ap-remarks').value;
+        save(); alert('Profile saved.');
+      };
+      host.querySelector('#rw-add').onclick=()=>{
+        const P = state.profiles[staffId] ||= {info:{},performance:{points:0},rewards:[],documents:[]};
+        const pts = Number(host.querySelector('#rw-points').value)||0;
+        const rec = { date:host.querySelector('#rw-date').value, points:pts, reason:host.querySelector('#rw-reason').value };
+        P.rewards.unshift(rec);
+        P.performance.points = (P.performance.points||0)+pts;
+        save(); drawRw();
+      };
+      function drawRw(){
+        const P = state.profiles[staffId]||{rewards:[]};
+        const tb = host.querySelector('#rw-tb');
+        tb.innerHTML = (P.rewards||[]).map((r,i)=>`<tr><td>${fmtDate(r.date)}</td><td>${r.points}</td><td>${r.reason||''}</td><td><button class="btn danger" data-i="${i}">Remove</button></td></tr>`).join('') || `<tr><td colspan="4" class="subtle">No rewards.</td></tr>`;
+        tb.querySelectorAll('button[data-i]').forEach(b=> b.onclick = ()=>{ const i = Number(b.dataset.i); P.rewards.splice(i,1); save(); drawRw(); });
+      }
+      drawRw();
+    }
+
+    function setupEvents(){
+      DOM.frm.addEventListener('submit', handleLogin);
+      DOM.logout.onclick = ()=>{ user=null; worksite=''; DOM.app.classList.add('hidden'); DOM.login.classList.remove('hidden'); };
+      DOM.sync.onclick = syncToWebhook;
+      DOM.load.onclick = async ()=>{ const ok = await fetchCloudState(); alert(ok?'Loaded ✓':'Load failed'); };
+      DOM.test.onclick = testWebhook;
+    }
+
+    async function main(){
+      load();
+      populateCentres();
+      setupEvents();
+      if(state.settings?.webhook){ await fetchCloudState(); }
+      ensureDummyRange101_600();
+    }
+    document.addEventListener('DOMContentLoaded', main);
+  })();
+  </script>
+</body>
+</html>
